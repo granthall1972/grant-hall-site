@@ -304,6 +304,49 @@ footer.site { border-top: 1px solid var(--border); }
 .enc-status { font-size: 13px; color: var(--muted); min-height: 1.4em; margin-top: 16px; }
 .enc-download { display: inline-block; margin-top: 14px; font-size: 13px; color: var(--accent); border-bottom: 1px solid var(--accent); }
 .enc-note { font-size: 11px; color: var(--muted); line-height: 1.7; margin-top: 28px; max-width: 420px; }
+
+.jwt { max-width: 760px; }
+.jwt-step { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+.jwt-step span { display: block; margin-bottom: 8px; }
+.jwt-area {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  resize: vertical;
+  word-break: break-all;
+}
+.jwt-alg { font-size: 12px; color: var(--accent); margin-bottom: 16px; min-height: 1.2em; }
+.jwt-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.jwt-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.jwt-out {
+  margin: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  min-height: 3em;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: auto;
+}
+.jwt-claims { font-size: 12px; color: var(--muted); line-height: 1.9; margin-bottom: 20px; }
+.jwt-sig { font-size: 13px; color: var(--muted); min-height: 1.4em; margin-top: 8px; }
+.jwt-good { color: #2e7d32; }
+.jwt-bad { color: #c62828; }
+html[data-theme="dark"] .jwt-good { color: #7bc97f; }
+html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) .jwt-good { color: #7bc97f; }
+  html:not([data-theme]) .jwt-bad { color: #ef7a7a; }
+}
+.jwt-msg { font-size: 12px; color: var(--accent); min-height: 1.2em; margin-top: 8px; }
 .xfer-btn {
   font: inherit;
   font-size: 13px;
@@ -326,4 +369,5 @@ footer.site { border-top: 1px solid var(--border); }
   .header-inner { padding: 18px; }
   .cv-row { flex-direction: column; }
   .cv-arrow { align-self: center; transform: rotate(90deg); padding: 4px 0; }
+  .jwt-cols { grid-template-columns: 1fr; }
 }

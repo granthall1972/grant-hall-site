@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JWT Decoder — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>JWT Decoder</h1>
+      <p>Decode and inspect a JSON Web Token. Optionally verify its signature. Nothing is sent anywhere.</p>
+    </div>
+
+    <div class="jwt">
+      <div class="jwt-step">
+        <span>Token</span>
+        <textarea id="jwt-in" class="jwt-area" rows="5" placeholder="paste JWT" spellcheck="false" autocomplete="off"></textarea>
+      </div>
+
+      <div id="jwt-alg" class="jwt-alg"></div>
+
+      <div class="jwt-cols">
+        <div>
+          <div class="jwt-label">Header</div>
+          <pre id="jwt-header" class="jwt-out"></pre>
+        </div>
+        <div>
+          <div class="jwt-label">Payload</div>
+          <pre id="jwt-payload" class="jwt-out"></pre>
+        </div>
+      </div>
+
+      <div id="jwt-claims" class="jwt-claims"></div>
+
+      <div class="jwt-step">
+        <span id="jwt-keylabel">Verification key (optional)</span>
+        <textarea id="jwt-key" class="jwt-area" rows="3" placeholder="HMAC secret, or PEM public key" spellcheck="false" autocomplete="off"></textarea>
+      </div>
+      <div id="jwt-sig" class="jwt-sig"></div>
+
+      <div id="jwt-msg" class="jwt-msg"></div>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var inEl = $("jwt-in");
+  var keyEl = $("jwt-key");
+  var headerEl = $("jwt-header");
+  var payloadEl = $("jwt-payload");
+  var algEl = $("jwt-alg");
+  var claimsEl = $("jwt-claims");
+  var sigEl = $("jwt-sig");
+  var msgEl = $("jwt-msg");
+  var keyLabelEl = $("jwt-keylabel");
+
+  function msg(m) { msgEl.textContent = m; }
+
+  function clearOut() {
+    msg(""); algEl.textContent = "";
+    headerEl.textContent = ""; payloadEl.textContent = "";
+    claimsEl.innerHTML = ""; sigEl.textContent = ""; sigEl.className = "jwt-sig";
+  }
+
+  function b64urlToBytes(str) {
+    str = str.replace(/-/g, "+").replace(/_/g, "/");
+    while (str.length % 4) str += "=";
+    var bin = atob(str);
+    var out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function b64urlToText(str) {
+    return new TextDecoder().decode(b64urlToBytes(str));
+  }
+  function pemToBytes(pem) {
+    var b64 = pem.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
+    var bin = atob(b64);
+    var out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  function rel(secs) {
+    var future = secs >= 0, s = Math.abs(secs);
+    var units = [["y", 31536000], ["d", 86400], ["h", 3600], ["m", 60], ["s", 1]];
+    for (var i = 0; i < units.length; i++) {
+      if (s >= units[i][1]) {
+        var n = Math.floor(s / units[i][1]);
+        return future ? "in " + n + units[i][0] : n + units[i][0] + " ago";
+      }
+    }
+    return future ? "now" : "just now";
+  }
+
+  function claimRows(payload) {
+    var rows = [], now = Math.floor(Date.now() / 1000);
+    function timeRow(label, v) {
+      if (typeof v !== "number") return;
+      rows.push({ text: label + ": " + new Date(v * 1000).toISOString() + " (" + rel(v - now) + ")", bad: false });
+    }
+    timeRow("iat  issued at", payload.iat);
+    timeRow("nbf  not before", payload.nbf);
+    if (typeof payload.exp === "number") {
+      var expired = payload.exp < now;
+      rows.push({
+        text: "exp  expires: " + new Date(payload.exp * 1000).toISOString() + " — " +
+              (expired ? "EXPIRED " + rel(payload.exp - now) : "valid, " + rel(payload.exp - now)),
+        bad: expired
+      });
+    }
+    ["iss", "sub", "aud", "azp", "scope"].forEach(function (k) {
+      if (payload[k] != null) {
+        rows.push({ text: k + ": " + (typeof payload[k] === "string" ? payload[k] : JSON.stringify(payload[k])), bad: false });
+      }
+    });
+    return rows;
+  }
+
+  var ALG = {
+    HS256: ["HMAC", "SHA-256"], HS384: ["HMAC", "SHA-384"], HS512: ["HMAC", "SHA-512"],
+    RS256: ["RSASSA-PKCS1-v1_5", "SHA-256"], RS384: ["RSASSA-PKCS1-v1_5", "SHA-384"], RS512: ["RSASSA-PKCS1-v1_5", "SHA-512"],
+    PS256: ["RSA-PSS", "SHA-256"], PS384: ["RSA-PSS", "SHA-384"], PS512: ["RSA-PSS", "SHA-512"],
+    ES256: ["ECDSA", "SHA-256", "P-256"], ES384: ["ECDSA", "SHA-384", "P-384"], ES512: ["ECDSA", "SHA-512", "P-521"]
+  };
+  var PSS_SALT = { "SHA-256": 32, "SHA-384": 48, "SHA-512": 64 };
+
+  async function verifySig(alg, keyText, signingInput, sigBytes) {
+    if (alg === "none") return { ok: null, msg: "Token is unsigned (alg: none) — nothing to verify." };
+    var spec = ALG[alg];
+    if (!spec) return { ok: null, msg: "alg " + alg + " isn't supported for verification here." };
+    if (!keyText.trim()) return { ok: null, msg: "Add the " + (spec[0] === "HMAC" ? "HMAC secret" : "PEM public key") + " above to verify the signature." };
+    if (!window.crypto || !crypto.subtle) return { ok: null, msg: "Verification needs https (works on the live site)." };
+    var data = new TextEncoder().encode(signingInput);
+    try {
+      var key, params;
+      if (spec[0] === "HMAC") {
+        key = await crypto.subtle.importKey("raw", new TextEncoder().encode(keyText), { name: "HMAC", hash: spec[1] }, false, ["verify"]);
+        params = { name: "HMAC" };
+      } else if (spec[0] === "ECDSA") {
+        key = await crypto.subtle.importKey("spki", pemToBytes(keyText), { name: "ECDSA", namedCurve: spec[2] }, false, ["verify"]);
+        params = { name: "ECDSA", hash: spec[1] };
+      } else if (spec[0] === "RSA-PSS") {
+        key = await crypto.subtle.importKey("spki", pemToBytes(keyText), { name: "RSA-PSS", hash: spec[1] }, false, ["verify"]);
+        params = { name: "RSA-PSS", saltLength: PSS_SALT[spec[1]] };
+      } else {
+        key = await crypto.subtle.importKey("spki", pemToBytes(keyText), { name: "RSASSA-PKCS1-v1_5", hash: spec[1] }, false, ["verify"]);
+        params = { name: "RSASSA-PKCS1-v1_5" };
+      }
+      var ok = await crypto.subtle.verify(params, key, sigBytes, data);
+      return { ok: ok, msg: ok ? "Signature valid." : "Signature does NOT match this key." };
+    } catch (e) {
+      return { ok: false, msg: "Couldn't verify: " + (e && e.message ? e.message : e) };
+    }
+  }
+
+  function run() {
+    clearOut();
+    var raw = inEl.value.trim();
+    if (!raw) return;
+    var parts = raw.split(".");
+    if (parts.length !== 3) { msg("Not a JWT — expected three dot-separated parts."); return; }
+
+    var header, payload;
+    try { header = JSON.parse(b64urlToText(parts[0])); } catch (e) { msg("Header is not valid base64url JSON."); return; }
+    try { payload = JSON.parse(b64urlToText(parts[1])); } catch (e) { msg("Payload is not valid base64url JSON."); return; }
+
+    headerEl.textContent = JSON.stringify(header, null, 2);
+    payloadEl.textContent = JSON.stringify(payload, null, 2);
+
+    var alg = header.alg || "?";
+    var bits = ["alg: " + alg];
+    if (header.typ) bits.push("typ: " + header.typ);
+    if (header.kid) bits.push("kid: " + header.kid);
+    algEl.textContent = bits.join("   ·   ");
+    keyLabelEl.textContent = /^HS/.test(alg) ? "HMAC secret (optional — to verify)" : "PEM public key (optional — to verify)";
+
+    claimRows(payload).forEach(function (r) {
+      var div = document.createElement("div");
+      div.textContent = r.text;
+      if (r.bad) div.className = "jwt-bad";
+      claimsEl.appendChild(div);
+    });
+
+    var sigBytes;
+    try { sigBytes = b64urlToBytes(parts[2]); } catch (e) { sigBytes = new Uint8Array(0); }
+    verifySig(alg, keyEl.value, parts[0] + "." + parts[1], sigBytes).then(function (res) {
+      sigEl.textContent = res.msg;
+      sigEl.className = "jwt-sig " + (res.ok === true ? "jwt-good" : res.ok === false ? "jwt-bad" : "");
+    });
+  }
+
+  var timer = null;
+  function schedule() { clearTimeout(timer); timer = setTimeout(run, 120); }
+  inEl.addEventListener("input", schedule);
+  keyEl.addEventListener("input", schedule);
+  run();
+})();
+</script>
+</body>
+</html>
