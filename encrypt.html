@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encrypt — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>Encrypt</h1>
+      <p>Password-encrypt a file with AES-256-GCM. Everything runs in your browser — the file never leaves the page.</p>
+    </div>
+
+    <div class="enc">
+      <div class="enc-modes">
+        <button type="button" class="enc-mode is-active" data-mode="encrypt">Encrypt</button>
+        <button type="button" class="enc-mode" data-mode="decrypt">Decrypt</button>
+      </div>
+
+      <div class="enc-step">
+        <span>File</span>
+        <input type="file" id="enc-file">
+      </div>
+
+      <div class="enc-step">
+        <span>Password</span>
+        <input type="password" id="enc-pass" class="enc-input" autocomplete="off" autocapitalize="off" spellcheck="false">
+      </div>
+
+      <div class="enc-step" id="enc-confirm-row">
+        <span>Confirm password</span>
+        <input type="password" id="enc-pass2" class="enc-input" autocomplete="off" autocapitalize="off" spellcheck="false">
+      </div>
+
+      <label class="enc-show"><input type="checkbox" id="enc-show"> show password</label>
+
+      <button type="button" id="enc-run" class="enc-btn">Encrypt</button>
+
+      <div id="enc-status" class="enc-status"></div>
+      <a id="enc-download" class="enc-download" hidden></a>
+
+      <p class="enc-note">AES-256-GCM, key from PBKDF2-SHA-256 (600,000 iterations), random salt and IV per file. A forgotten password cannot be recovered. Large files are held in memory and may fail on low-RAM devices.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var fileEl = $("enc-file");
+  var passEl = $("enc-pass");
+  var pass2El = $("enc-pass2");
+  var confirmRow = $("enc-confirm-row");
+  var runBtn = $("enc-run");
+  var statusEl = $("enc-status");
+  var dlEl = $("enc-download");
+
+  var MAGIC = [0x47, 0x48, 0x45, 0x4E, 0x43, 0x31]; // "GHENC1"
+  var VERSION = 1;
+  var ITERATIONS = 600000;
+  var SALT_LEN = 16;
+  var IV_LEN = 12;
+  var HEADER_LEN = 6 + 1 + 4 + SALT_LEN + IV_LEN; // 39
+  var mode = "encrypt";
+
+  function status(m) { statusEl.textContent = m; }
+
+  function concat(list) {
+    var total = 0, i;
+    for (i = 0; i < list.length; i++) total += list[i].length;
+    var out = new Uint8Array(total), off = 0;
+    for (i = 0; i < list.length; i++) { out.set(list[i], off); off += list[i].length; }
+    return out;
+  }
+
+  function deriveKey(password, salt, iters) {
+    return crypto.subtle.importKey(
+      "raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]
+    ).then(function (base) {
+      return crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt: salt, iterations: iters, hash: "SHA-256" },
+        base,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt", "decrypt"]
+      );
+    });
+  }
+
+  function download(bytes, name) {
+    var url = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
+    dlEl.href = url;
+    dlEl.download = name;
+    dlEl.textContent = "Download " + name;
+    dlEl.hidden = false;
+    dlEl.click();
+  }
+
+  async function doEncrypt(file, password) {
+    var fileBytes = new Uint8Array(await file.arrayBuffer());
+    var nameBytes = new TextEncoder().encode(file.name);
+    var nameLen = new Uint8Array(2);
+    new DataView(nameLen.buffer).setUint16(0, nameBytes.length, false);
+    var plain = concat([nameLen, nameBytes, fileBytes]);
+
+    var salt = crypto.getRandomValues(new Uint8Array(SALT_LEN));
+    var iv = crypto.getRandomValues(new Uint8Array(IV_LEN));
+    var key = await deriveKey(password, salt, ITERATIONS);
+    var ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, plain));
+
+    var iters = new Uint8Array(4);
+    new DataView(iters.buffer).setUint32(0, ITERATIONS, false);
+    var out = concat([new Uint8Array(MAGIC), new Uint8Array([VERSION]), iters, salt, iv, ct]);
+    download(out, file.name + ".ghenc");
+    status("Encrypted " + file.name + " (" + fmtBytes(out.length) + ").");
+  }
+
+  async function doDecrypt(file, password) {
+    var data = new Uint8Array(await file.arrayBuffer());
+    if (data.length < HEADER_LEN) throw new Error("bad");
+    for (var i = 0; i < MAGIC.length; i++) {
+      if (data[i] !== MAGIC[i]) throw new Error("Not a file encrypted by this tool.");
+    }
+    if (data[6] !== VERSION) throw new Error("Unsupported file version.");
+    var iters = new DataView(data.buffer, data.byteOffset + 7, 4).getUint32(0, false);
+    var salt = data.slice(7 + 4, 7 + 4 + SALT_LEN);
+    var iv = data.slice(7 + 4 + SALT_LEN, HEADER_LEN);
+    var ct = data.slice(HEADER_LEN);
+
+    var key = await deriveKey(password, salt, iters);
+    var plain;
+    try {
+      plain = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, ct));
+    } catch (e) {
+      throw new Error("Wrong password or corrupted file.");
+    }
+    var nameLen = new DataView(plain.buffer, plain.byteOffset, 2).getUint16(0, false);
+    var name = new TextDecoder().decode(plain.slice(2, 2 + nameLen)) || "decrypted.bin";
+    var fileBytes = plain.slice(2 + nameLen);
+    download(fileBytes, name);
+    status("Decrypted to " + name + " (" + fmtBytes(fileBytes.length) + ").");
+  }
+
+  function fmtBytes(n) {
+    if (n < 1024) return n + " B";
+    if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+    if (n < 1073741824) return (n / 1048576).toFixed(1) + " MB";
+    return (n / 1073741824).toFixed(2) + " GB";
+  }
+
+  runBtn.addEventListener("click", async function () {
+    dlEl.hidden = true;
+    if (!crypto || !crypto.subtle) {
+      status("This needs to run over https (it does on the live site).");
+      return;
+    }
+    var file = fileEl.files[0];
+    if (!file) { status("Choose a file."); return; }
+    var password = passEl.value;
+    if (!password) { status("Enter a password."); return; }
+    if (mode === "encrypt" && password !== pass2El.value) {
+      status("Passwords don't match.");
+      return;
+    }
+
+    runBtn.disabled = true;
+    status(mode === "encrypt" ? "Encrypting…" : "Decrypting…");
+    try {
+      if (mode === "encrypt") await doEncrypt(file, password);
+      else await doDecrypt(file, password);
+    } catch (e) {
+      status(e && e.message ? e.message : String(e));
+    }
+    runBtn.disabled = false;
+  });
+
+  var modes = document.querySelectorAll(".enc-mode");
+  modes.forEach(function (b) {
+    b.addEventListener("click", function () {
+      modes.forEach(function (x) { x.classList.toggle("is-active", x === b); });
+      mode = b.getAttribute("data-mode");
+      confirmRow.hidden = mode !== "encrypt";
+      runBtn.textContent = mode === "encrypt" ? "Encrypt" : "Decrypt";
+      status("");
+      dlEl.hidden = true;
+    });
+  });
+
+  $("enc-show").addEventListener("change", function () {
+    var t = this.checked ? "text" : "password";
+    passEl.type = t;
+    pass2El.type = t;
+  });
+})();
+</script>
+</body>
+</html>
