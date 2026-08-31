@@ -347,6 +347,55 @@ html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
   html:not([data-theme]) .jwt-bad { color: #ef7a7a; }
 }
 .jwt-msg { font-size: 12px; color: var(--accent); min-height: 1.2em; margin-top: 8px; }
+
+/* shared tool primitives */
+.tool { max-width: 640px; }
+.seg { display: flex; gap: 8px; margin-bottom: 24px; }
+.seg-btn {
+  font: inherit;
+  font-size: 13px;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.seg-btn.is-active { color: var(--accent); border-color: var(--accent); }
+.tool-row { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+.tool-row span { display: block; margin-bottom: 8px; }
+.tool-row b { color: var(--text); font-weight: 600; }
+.tool-field, .tool-area, .tool-select {
+  width: 100%;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+}
+.tool-area { display: block; font-size: 12px; resize: vertical; word-break: break-all; }
+.tool-select { width: auto; }
+.tool-range { width: 100%; }
+.tool-check { display: block; font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+.tool-actions { margin: 4px 0 18px; }
+.tool-btn {
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  background: none;
+  border: 1px solid var(--accent);
+  padding: 9px 16px;
+  cursor: pointer;
+  margin-right: 8px;
+}
+.tool-btn:hover { opacity: 0.65; }
+.tool-btn:disabled { opacity: 0.4; cursor: default; }
+.tool-btn.sub { color: var(--muted); border-color: var(--border); }
+.tool-hint { color: var(--accent); }
+.tool-dl { display: inline-block; font-size: 13px; color: var(--accent); border-bottom: 1px solid var(--accent); }
+.tool-msg { font-size: 12px; color: var(--accent); min-height: 1.2em; margin-top: 8px; white-space: pre-wrap; }
+.tool-note { font-size: 11px; color: var(--muted); line-height: 1.7; margin-top: 28px; max-width: 480px; }
+.tool-input-file { font: inherit; font-size: 13px; color: var(--text); }
 .xfer-btn {
   font: inherit;
   font-size: 13px;

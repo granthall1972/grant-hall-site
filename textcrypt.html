@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text Encrypt — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>Text Encrypt</h1>
+      <p>Password-encrypt a message into a paste-safe block with AES-256-GCM. Runs entirely in your browser.</p>
+    </div>
+
+    <div class="tool">
+      <div class="seg">
+        <button type="button" class="seg-btn is-active" data-mode="encrypt">Encrypt</button>
+        <button type="button" class="seg-btn" data-mode="decrypt">Decrypt</button>
+      </div>
+
+      <div class="tool-row">
+        <span id="in-label">Message</span>
+        <textarea id="tc-in" class="tool-area" rows="6" spellcheck="false" autocomplete="off"></textarea>
+      </div>
+
+      <div class="tool-row">
+        <span>Password</span>
+        <input type="password" id="tc-pass" class="tool-field" autocomplete="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="tool-row" id="tc-confirm-row">
+        <span>Confirm password</span>
+        <input type="password" id="tc-pass2" class="tool-field" autocomplete="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <label class="tool-check"><input type="checkbox" id="tc-show"> show password</label>
+
+      <div class="tool-actions">
+        <button type="button" id="tc-run" class="tool-btn">Encrypt</button>
+        <button type="button" id="tc-copy" class="tool-btn sub">copy output</button>
+      </div>
+
+      <div class="tool-row">
+        <span id="out-label">Encrypted block</span>
+        <textarea id="tc-out" class="tool-area" rows="6" readonly spellcheck="false"></textarea>
+      </div>
+      <div id="tc-msg" class="tool-msg"></div>
+
+      <p class="tool-note">AES-256-GCM, key from PBKDF2-SHA-256 (600,000 iterations), random salt and IV per message. A forgotten password cannot be recovered.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var MAGIC = [0x47, 0x48, 0x54, 0x58, 0x54, 0x31]; // "GHTXT1"
+  var VERSION = 1;
+  var ITER = 600000;
+  var BEGIN = "-----BEGIN GH ENCRYPTED MESSAGE-----";
+  var END = "-----END GH ENCRYPTED MESSAGE-----";
+  var mode = "encrypt";
+
+  var inEl = $("tc-in"), outEl = $("tc-out"), passEl = $("tc-pass"), pass2El = $("tc-pass2");
+  var msgEl = $("tc-msg"), runBtn = $("tc-run");
+
+  function msg(m) { msgEl.textContent = m; }
+
+  function binToBytes(bin) {
+    var b = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+    return b;
+  }
+  function bytesToBin(bytes) {
+    var s = "";
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return s;
+  }
+  function concat(list) {
+    var total = 0, i;
+    for (i = 0; i < list.length; i++) total += list[i].length;
+    var o = new Uint8Array(total), off = 0;
+    for (i = 0; i < list.length; i++) { o.set(list[i], off); off += list[i].length; }
+    return o;
+  }
+
+  function deriveKey(password, salt, iters) {
+    return crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"])
+      .then(function (base) {
+        return crypto.subtle.deriveKey(
+          { name: "PBKDF2", salt: salt, iterations: iters, hash: "SHA-256" },
+          base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
+        );
+      });
+  }
+
+  async function encryptText(plaintext, password) {
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var key = await deriveKey(password, salt, ITER);
+    var ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, new TextEncoder().encode(plaintext)));
+    var iters = new Uint8Array(4);
+    new DataView(iters.buffer).setUint32(0, ITER, false);
+    var blob = concat([new Uint8Array(MAGIC), new Uint8Array([VERSION]), iters, salt, iv, ct]);
+    var b64 = btoa(bytesToBin(blob)).replace(/(.{76})/g, "$1\n");
+    return BEGIN + "\n\n" + b64 + "\n" + END;
+  }
+
+  async function decryptText(armored, password) {
+    var b64 = armored.replace(/-----[^-]+-----/g, "").replace(/\s+/g, "");
+    if (!b64) throw new Error("Nothing to decrypt.");
+    var data;
+    try { data = binToBytes(atob(b64)); } catch (e) { throw new Error("That block isn't valid."); }
+    if (data.length < 39) throw new Error("That block isn't a GH encrypted message.");
+    for (var i = 0; i < MAGIC.length; i++) if (data[i] !== MAGIC[i]) throw new Error("That block isn't a GH encrypted message.");
+    if (data[6] !== VERSION) throw new Error("Unsupported message version.");
+    var iters = new DataView(data.buffer, data.byteOffset + 7, 4).getUint32(0, false);
+    var salt = data.slice(11, 27), iv = data.slice(27, 39), ct = data.slice(39);
+    var key = await deriveKey(password, salt, iters);
+    try {
+      var pt = new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, ct));
+      return new TextDecoder().decode(pt);
+    } catch (e) {
+      throw new Error("Wrong password or corrupted message.");
+    }
+  }
+
+  runBtn.addEventListener("click", async function () {
+    msg("");
+    if (!window.crypto || !crypto.subtle) { msg("This needs to run over https (it does on the live site)."); return; }
+    var text = inEl.value;
+    if (!text) { msg(mode === "encrypt" ? "Enter a message." : "Paste an encrypted block."); return; }
+    var password = passEl.value;
+    if (!password) { msg("Enter a password."); return; }
+    if (mode === "encrypt" && password !== pass2El.value) { msg("Passwords don't match."); return; }
+
+    runBtn.disabled = true;
+    msg(mode === "encrypt" ? "Encrypting…" : "Decrypting…");
+    try {
+      outEl.value = mode === "encrypt" ? await encryptText(text, password) : await decryptText(text, password);
+      msg(mode === "encrypt" ? "Encrypted." : "Decrypted.");
+    } catch (e) {
+      outEl.value = "";
+      msg(e && e.message ? e.message : String(e));
+    }
+    runBtn.disabled = false;
+  });
+
+  $("tc-copy").addEventListener("click", function () {
+    var btn = this;
+    if (!outEl.value) return;
+    var done = function (ok) { btn.textContent = ok ? "copied" : "Ctrl+C"; setTimeout(function () { btn.textContent = "copy output"; }, 1200); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(outEl.value).then(function () { done(true); }, function () { done(false); });
+    } else { outEl.select(); done(false); }
+  });
+
+  $("tc-show").addEventListener("change", function () {
+    var t = this.checked ? "text" : "password";
+    passEl.type = t; pass2El.type = t;
+  });
+
+  var segs = document.querySelectorAll(".seg-btn");
+  segs.forEach(function (b) {
+    b.addEventListener("click", function () {
+      segs.forEach(function (x) { x.classList.toggle("is-active", x === b); });
+      mode = b.getAttribute("data-mode");
+      var enc = mode === "encrypt";
+      $("tc-confirm-row").hidden = !enc;
+      $("in-label").textContent = enc ? "Message" : "Encrypted block";
+      $("out-label").textContent = enc ? "Encrypted block" : "Message";
+      runBtn.textContent = enc ? "Encrypt" : "Decrypt";
+      inEl.value = ""; outEl.value = ""; msg("");
+    });
+  });
+})();
+</script>
+</body>
+</html>

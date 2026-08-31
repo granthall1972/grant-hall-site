@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encode / Decode — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>Encode / Decode</h1>
+      <p>Base64 and URL encoding for text or files. All local.</p>
+    </div>
+
+    <div class="tool">
+      <div class="seg">
+        <button type="button" class="seg-btn is-active" data-mode="text">Text</button>
+        <button type="button" class="seg-btn" data-mode="file">File</button>
+      </div>
+
+      <section id="text-mode">
+        <div class="tool-row">
+          <span>Operation</span>
+          <select id="op" class="tool-select">
+            <option value="b64-enc">Base64 encode</option>
+            <option value="b64-dec">Base64 decode</option>
+            <option value="b64url-enc">Base64URL encode</option>
+            <option value="b64url-dec">Base64URL decode</option>
+            <option value="url-enc">URL-encode (component)</option>
+            <option value="url-dec">URL-decode (component)</option>
+            <option value="urlfull-enc">URL-encode (whole URL)</option>
+            <option value="urlfull-dec">URL-decode (whole URL)</option>
+          </select>
+        </div>
+        <div class="tool-row">
+          <span>Input</span>
+          <textarea id="t-in" class="tool-area" rows="5" spellcheck="false" autocomplete="off"></textarea>
+        </div>
+        <div class="tool-actions">
+          <button type="button" id="t-swap" class="tool-btn sub">swap &#8597;</button>
+          <button type="button" id="t-copy" class="tool-btn sub">copy output</button>
+        </div>
+        <div class="tool-row">
+          <span>Output</span>
+          <textarea id="t-out" class="tool-area" rows="5" readonly spellcheck="false"></textarea>
+        </div>
+        <div id="t-msg" class="tool-msg"></div>
+      </section>
+
+      <section id="file-mode" hidden>
+        <div class="tool-row">
+          <span>File &rarr; Base64</span>
+          <input type="file" id="f-in">
+        </div>
+        <label class="tool-check"><input type="checkbox" id="f-datauri"> as data URI (include mime type)</label>
+        <textarea id="f-out" class="tool-area" rows="5" readonly spellcheck="false" placeholder="base64 output"></textarea>
+        <div class="tool-actions"><button type="button" id="f-copy" class="tool-btn sub">copy</button></div>
+
+        <div class="tool-row">
+          <span>Base64 &rarr; File</span>
+          <textarea id="d-in" class="tool-area" rows="5" spellcheck="false" autocomplete="off" placeholder="paste base64 or data URI"></textarea>
+        </div>
+        <div class="tool-row">
+          <span>Save as</span>
+          <input type="text" id="d-name" class="tool-field" value="decoded.bin" autocomplete="off">
+        </div>
+        <div class="tool-actions"><button type="button" id="d-run" class="tool-btn">Decode &amp; download</button></div>
+        <a id="d-link" class="tool-dl" hidden></a>
+        <div id="f-msg" class="tool-msg"></div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var TE = new TextEncoder(), TD = new TextDecoder();
+
+  function binToBytes(bin) {
+    var b = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+    return b;
+  }
+  function bytesToBin(bytes) {
+    var s = "";
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return s;
+  }
+  function b64enc(bytes) { return btoa(bytesToBin(bytes)); }
+  function b64dec(str) { return binToBytes(atob(str.replace(/\s+/g, ""))); }
+  function toUrlSafe(b64) { return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+  function fromUrlSafe(s) {
+    s = s.trim().replace(/-/g, "+").replace(/_/g, "/");
+    while (s.length % 4) s += "=";
+    return s;
+  }
+
+  var OPS = {
+    "b64-enc": function (t) { return b64enc(TE.encode(t)); },
+    "b64-dec": function (t) { return TD.decode(b64dec(t)); },
+    "b64url-enc": function (t) { return toUrlSafe(b64enc(TE.encode(t))); },
+    "b64url-dec": function (t) { return TD.decode(b64dec(fromUrlSafe(t))); },
+    "url-enc": function (t) { return encodeURIComponent(t); },
+    "url-dec": function (t) { return decodeURIComponent(t); },
+    "urlfull-enc": function (t) { return encodeURI(t); },
+    "urlfull-dec": function (t) { return decodeURI(t); }
+  };
+  var INVERSE = {
+    "b64-enc": "b64-dec", "b64-dec": "b64-enc",
+    "b64url-enc": "b64url-dec", "b64url-dec": "b64url-enc",
+    "url-enc": "url-dec", "url-dec": "url-enc",
+    "urlfull-enc": "urlfull-dec", "urlfull-dec": "urlfull-enc"
+  };
+
+  var tIn = $("t-in"), tOut = $("t-out"), opSel = $("op"), tMsg = $("t-msg");
+
+  function runText() {
+    tMsg.textContent = "";
+    var v = tIn.value;
+    if (!v) { tOut.value = ""; return; }
+    try {
+      tOut.value = OPS[opSel.value](v);
+    } catch (e) {
+      tOut.value = "";
+      tMsg.textContent = "Couldn't " + opSel.value.replace("-", " ") + ": " + (e && e.message ? e.message : e);
+    }
+  }
+
+  tIn.addEventListener("input", runText);
+  opSel.addEventListener("change", runText);
+  $("t-swap").addEventListener("click", function () {
+    if (!tOut.value) return;
+    tIn.value = tOut.value;
+    if (INVERSE[opSel.value]) opSel.value = INVERSE[opSel.value];
+    runText();
+  });
+
+  function wireCopy(btn, getText, label) {
+    btn.addEventListener("click", function () {
+      var text = getText();
+      if (!text) return;
+      var done = function (ok) {
+        btn.textContent = ok ? "copied" : "Ctrl+C";
+        setTimeout(function () { btn.textContent = label; }, 1200);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+      } else { done(false); }
+    });
+  }
+  wireCopy($("t-copy"), function () { return tOut.value; }, "copy output");
+  wireCopy($("f-copy"), function () { return $("f-out").value; }, "copy");
+
+  /* file -> base64 */
+  var fIn = $("f-in"), fOut = $("f-out"), fData = $("f-datauri"), fMsg = $("f-msg");
+  async function fileToB64() {
+    fMsg.textContent = "";
+    var file = fIn.files[0];
+    if (!file) { fOut.value = ""; return; }
+    try {
+      var bytes = new Uint8Array(await file.arrayBuffer());
+      var b64 = b64enc(bytes);
+      fOut.value = fData.checked
+        ? "data:" + (file.type || "application/octet-stream") + ";base64," + b64
+        : b64;
+    } catch (e) {
+      fMsg.textContent = "Read failed: " + (e && e.message ? e.message : e);
+    }
+  }
+  fIn.addEventListener("change", fileToB64);
+  fData.addEventListener("change", fileToB64);
+
+  /* base64 -> file */
+  $("d-run").addEventListener("click", function () {
+    fMsg.textContent = "";
+    var v = $("d-in").value.trim();
+    if (!v) { fMsg.textContent = "Paste some base64 first."; return; }
+    var mime = "application/octet-stream";
+    var m = v.match(/^data:([^;,]*);?(base64)?,([\s\S]*)$/);
+    if (m) { if (m[1]) mime = m[1]; v = m[3]; }
+    try {
+      var bytes = b64dec(fromUrlSafe(v));
+      var url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+      var link = $("d-link");
+      link.href = url;
+      link.download = $("d-name").value || "decoded.bin";
+      link.textContent = "Download " + link.download;
+      link.hidden = false;
+      link.click();
+      fMsg.textContent = "Decoded " + bytes.length + " bytes.";
+    } catch (e) {
+      fMsg.textContent = "Not valid base64.";
+    }
+  });
+
+  var segs = document.querySelectorAll(".seg-btn");
+  segs.forEach(function (b) {
+    b.addEventListener("click", function () {
+      segs.forEach(function (x) { x.classList.toggle("is-active", x === b); });
+      var text = b.getAttribute("data-mode") === "text";
+      $("text-mode").hidden = !text;
+      $("file-mode").hidden = text;
+    });
+  });
+
+  runText();
+})();
+</script>
+</body>
+</html>
