@@ -47,7 +47,6 @@
         <div class="cv-field">
           <div class="cv-inputwrap">
             <input id="cv-input" class="cv-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="33mm">
-            <button id="cv-paste" class="cv-btn" type="button">paste</button>
           </div>
         </div>
         <span class="cv-arrow">&rarr;</span>
@@ -201,27 +200,9 @@
     }
   }
 
-  function pasteIn(btn) {
-    if (navigator.clipboard && navigator.clipboard.readText) {
-      navigator.clipboard.readText().then(function (t) {
-        input.value = t.trim();
-        render();
-        input.focus();
-        flash(btn, "pasted", "paste");
-      }, function () {
-        input.focus();
-        flash(btn, "Ctrl+V", "paste");
-      });
-    } else {
-      input.focus();
-      flash(btn, "Ctrl+V", "paste");
-    }
-  }
-
   sel.addEventListener("change", render);
   input.addEventListener("input", render);
   document.getElementById("cv-copy").addEventListener("click", function () { copyOut(this); });
-  document.getElementById("cv-paste").addEventListener("click", function () { pasteIn(this); });
   render();
 })();
 </script>

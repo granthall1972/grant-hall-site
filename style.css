@@ -159,9 +159,9 @@ footer.site { border-top: 1px solid var(--border); }
   color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
-  padding: 12px 66px 12px 14px;
+  padding: 12px 14px;
 }
-.cv-output { display: block; color: var(--accent); overflow-x: auto; white-space: nowrap; }
+.cv-output { display: block; padding-right: 66px; color: var(--accent); overflow-x: auto; white-space: nowrap; }
 .cv-btn {
   position: absolute;
   top: 50%;
