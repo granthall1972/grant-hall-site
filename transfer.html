@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transfer — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>Transfer</h1>
+      <p>Direct browser-to-browser file transfer. No upload — the file goes straight between the two of you. Trade the codes over any chat.</p>
+    </div>
+
+    <div class="xfer">
+      <div class="xfer-modes">
+        <button type="button" class="xfer-mode is-active" data-mode="send">Send</button>
+        <button type="button" class="xfer-mode" data-mode="recv">Receive</button>
+      </div>
+
+      <section id="send-panel">
+        <div class="xfer-step">
+          <span>1. Choose a file</span>
+          <input type="file" id="send-file">
+        </div>
+        <button type="button" id="send-make" class="xfer-btn">Create offer code</button>
+        <div class="xfer-step">
+          <span>2. Send this code to the other person</span>
+          <textarea id="send-offer" class="xfer-code" rows="4" readonly placeholder="appears here"></textarea>
+          <button type="button" class="xfer-copy" data-copy="send-offer">copy</button>
+        </div>
+        <div class="xfer-step">
+          <span>3. Paste their reply code, then connect</span>
+          <textarea id="send-answer" class="xfer-code" rows="4" placeholder="paste reply code"></textarea>
+        </div>
+        <button type="button" id="send-connect" class="xfer-btn">Connect &amp; send</button>
+      </section>
+
+      <section id="recv-panel" hidden>
+        <div class="xfer-step">
+          <span>1. Paste the code you were given</span>
+          <textarea id="recv-offer" class="xfer-code" rows="4" placeholder="paste offer code"></textarea>
+        </div>
+        <button type="button" id="recv-make" class="xfer-btn">Create reply code</button>
+        <div class="xfer-step">
+          <span>2. Send this reply code back to the sender</span>
+          <textarea id="recv-answer" class="xfer-code" rows="4" readonly placeholder="appears here"></textarea>
+          <button type="button" class="xfer-copy" data-copy="recv-answer">copy</button>
+        </div>
+      </section>
+
+      <div id="xfer-status" class="xfer-status"></div>
+      <progress id="xfer-progress" class="xfer-progress" value="0" max="1" hidden></progress>
+      <a id="xfer-download" class="xfer-download" hidden></a>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+<script>
+(function () {
+  var RTC_CONFIG = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+  var CHUNK = 16384;           // bytes per data-channel message
+  var HIGH = CHUNK * 64;       // pause sending above this much buffered
+  var LOW = CHUNK * 8;         // resume once buffer drains to here
+
+  var $ = function (id) { return document.getElementById(id); };
+  var statusEl = $("xfer-status");
+  var progEl = $("xfer-progress");
+  var dlEl = $("xfer-download");
+
+  function status(m) { statusEl.textContent = m; }
+  function progShow() { progEl.hidden = false; progEl.value = 0; }
+  function progSet(f) { progEl.value = f < 1 ? f : 1; }
+
+  function fmtBytes(n) {
+    if (n < 1024) return n + " B";
+    if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+    if (n < 1073741824) return (n / 1048576).toFixed(1) + " MB";
+    return (n / 1073741824).toFixed(2) + " GB";
+  }
+
+  function encode(desc) { return btoa(JSON.stringify(desc)); }
+  function decode(str) { return JSON.parse(atob(str.trim())); }
+
+  // Wait for ICE candidates to finish gathering so the code is self-contained
+  // (no trickle). Falls back to a timeout in case 'complete' never fires.
+  function waitIce(pc) {
+    return new Promise(function (resolve) {
+      if (pc.iceGatheringState === "complete") return resolve();
+      var settled = false;
+      function finish() {
+        if (settled) return;
+        settled = true;
+        pc.removeEventListener("icegatheringstatechange", check);
+        resolve();
+      }
+      function check() { if (pc.iceGatheringState === "complete") finish(); }
+      pc.addEventListener("icegatheringstatechange", check);
+      setTimeout(finish, 3000);
+    });
+  }
+
+  function wirePc(pc) {
+    pc.addEventListener("iceconnectionstatechange", function () {
+      var s = pc.iceConnectionState;
+      if (s === "failed") status("Connection failed — a strict NAT or firewall is blocking the direct link.");
+      else if (s === "disconnected") status("Connection dropped.");
+    });
+  }
+
+  /* ---- Send ---- */
+  var sendPc = null, sendDc = null, sendFile = null;
+
+  $("send-make").addEventListener("click", async function () {
+    sendFile = $("send-file").files[0];
+    if (!sendFile) { status("Pick a file first."); return; }
+    sendPc = new RTCPeerConnection(RTC_CONFIG);
+    wirePc(sendPc);
+    sendDc = sendPc.createDataChannel("file");
+    sendDc.binaryType = "arraybuffer";
+    sendDc.bufferedAmountLowThreshold = LOW;
+    sendDc.addEventListener("open", sendLoop);
+    sendDc.addEventListener("close", function () { status("Channel closed."); });
+    await sendPc.setLocalDescription(await sendPc.createOffer());
+    await waitIce(sendPc);
+    $("send-offer").value = encode(sendPc.localDescription);
+    status("Offer code ready. Send it over, then paste their reply.");
+  });
+
+  $("send-connect").addEventListener("click", async function () {
+    if (!sendPc) { status("Create the offer code first."); return; }
+    try {
+      await sendPc.setRemoteDescription(decode($("send-answer").value));
+      status("Connecting…");
+    } catch (e) {
+      status("That reply code didn't parse.");
+    }
+  });
+
+  async function sendLoop() {
+    sendDc.send(JSON.stringify({
+      name: sendFile.name,
+      size: sendFile.size,
+      type: sendFile.type || "application/octet-stream"
+    }));
+    progShow();
+    var offset = 0;
+    while (offset < sendFile.size) {
+      if (sendDc.bufferedAmount > HIGH) {
+        await new Promise(function (r) {
+          sendDc.addEventListener("bufferedamountlow", r, { once: true });
+        });
+      }
+      var buf = await sendFile.slice(offset, offset + CHUNK).arrayBuffer();
+      sendDc.send(buf);
+      offset += buf.byteLength;
+      progSet(offset / sendFile.size);
+    }
+    status("Sent " + fmtBytes(sendFile.size) + ".");
+  }
+
+  /* ---- Receive ---- */
+  var recvPc = null, meta = null, chunks = null, got = 0;
+
+  $("recv-make").addEventListener("click", async function () {
+    try {
+      var offer = decode($("recv-offer").value);
+      recvPc = new RTCPeerConnection(RTC_CONFIG);
+      wirePc(recvPc);
+      recvPc.addEventListener("datachannel", function (ev) {
+        var dc = ev.channel;
+        dc.binaryType = "arraybuffer";
+        meta = null; chunks = []; got = 0;
+        dc.addEventListener("open", function () { status("Connected. Waiting for the file…"); });
+        dc.addEventListener("close", function () { status("Channel closed."); });
+        dc.addEventListener("message", onMessage);
+      });
+      await recvPc.setRemoteDescription(offer);
+      await recvPc.setLocalDescription(await recvPc.createAnswer());
+      await waitIce(recvPc);
+      $("recv-answer").value = encode(recvPc.localDescription);
+      status("Reply code ready. Send it back to the sender.");
+    } catch (e) {
+      status("That offer code didn't parse.");
+    }
+  });
+
+  function onMessage(ev) {
+    if (typeof ev.data === "string") {
+      meta = JSON.parse(ev.data);
+      progShow();
+      status("Receiving " + meta.name + " (" + fmtBytes(meta.size) + ")…");
+      return;
+    }
+    chunks.push(ev.data);
+    got += ev.data.byteLength;
+    if (meta) {
+      progSet(got / meta.size);
+      if (got >= meta.size) finishRecv();
+    }
+  }
+
+  function finishRecv() {
+    var url = URL.createObjectURL(new Blob(chunks, { type: meta.type }));
+    dlEl.href = url;
+    dlEl.download = meta.name;
+    dlEl.textContent = "Download " + meta.name;
+    dlEl.hidden = false;
+    dlEl.click();
+    status("Received " + fmtBytes(meta.size) + ".");
+  }
+
+  /* ---- Mode toggle + copy ---- */
+  var modes = document.querySelectorAll(".xfer-mode");
+  modes.forEach(function (b) {
+    b.addEventListener("click", function () {
+      modes.forEach(function (x) { x.classList.toggle("is-active", x === b); });
+      var send = b.getAttribute("data-mode") === "send";
+      $("send-panel").hidden = !send;
+      $("recv-panel").hidden = send;
+    });
+  });
+
+  document.querySelectorAll(".xfer-copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var el = $(btn.getAttribute("data-copy"));
+      var text = el.value;
+      if (!text) return;
+      var flash = function (ok) {
+        btn.textContent = ok ? "copied" : "Ctrl+C";
+        if (!ok) el.select();
+        setTimeout(function () { btn.textContent = "copy"; }, 1200);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { flash(true); }, function () { flash(false); });
+      } else {
+        el.select();
+        try { flash(document.execCommand("copy")); } catch (e) { flash(false); }
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>
