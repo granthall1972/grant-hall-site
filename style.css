@@ -161,7 +161,7 @@ footer.site { border-top: 1px solid var(--border); }
   border: 1px solid var(--border);
   padding: 12px 14px;
 }
-.cv-output { display: block; padding-right: 66px; color: var(--accent); overflow-x: auto; white-space: nowrap; }
+.cv-output { display: block; min-height: 1.6em; padding-right: 66px; color: var(--accent); overflow-x: auto; white-space: nowrap; }
 .cv-btn {
   position: absolute;
   top: 50%;
@@ -177,8 +177,6 @@ footer.site { border-top: 1px solid var(--border); }
 }
 .cv-btn:hover { opacity: 0.65; }
 .cv-arrow { color: var(--muted); padding: 12px 0; }
-.cv-hint { font-size: 12px; color: var(--muted); margin: 16px 0 0; min-height: 1em; }
-.page-head code, .cv-hint code { color: var(--accent); }
 
 @media (max-width: 640px) {
   main { padding: 44px 0 72px; }

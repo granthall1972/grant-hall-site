@@ -38,7 +38,7 @@
     <a class="back-link" href="tools.html">&larr; Tools</a>
     <div class="page-head">
       <h1>Converter</h1>
-      <p>Type a value with its unit, like <code>33mm</code>, and it picks the conversion. Or choose one from the list and just type numbers.</p>
+      <p>Pick a conversion and enter a value.</p>
     </div>
 
     <div class="converter">
@@ -46,7 +46,7 @@
       <div class="cv-row">
         <div class="cv-field">
           <div class="cv-inputwrap">
-            <input id="cv-input" class="cv-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="33mm">
+            <input id="cv-input" class="cv-input" type="number" inputmode="decimal" step="any" autocomplete="off" value="1">
           </div>
         </div>
         <span class="cv-arrow">&rarr;</span>
@@ -57,7 +57,6 @@
           </div>
         </div>
       </div>
-      <p id="cv-hint" class="cv-hint"></p>
     </div>
   </div>
 </main>
@@ -76,41 +75,38 @@
 <script>
 (function () {
   // Each entry is one directional conversion and one dropdown option.
-  // `tokens` are the unit strings that auto-select it when typed. An empty
-  // list means the entry is only reachable by picking it from the dropdown.
   var PAIRS = [
-    { from: "Celsius", to: "Fahrenheit", tokens: ["c", "celsius", "centigrade"], fn: function (x) { return x * 9 / 5 + 32; } },
-    { from: "Fahrenheit", to: "Celsius", tokens: ["f", "fahrenheit"], fn: function (x) { return (x - 32) * 5 / 9; } },
-    { from: "Celsius", to: "Kelvin", tokens: [], fn: function (x) { return x + 273.15; } },
-    { from: "Kelvin", to: "Celsius", tokens: ["k", "kelvin"], fn: function (x) { return x - 273.15; } },
-    { from: "Millimeters", to: "Inches", tokens: ["mm", "millimeter", "millimeters", "millimetre", "millimetres"], fn: function (x) { return x / 25.4; } },
-    { from: "Centimeters", to: "Inches", tokens: ["cm", "centimeter", "centimeters", "centimetre", "centimetres"], fn: function (x) { return x / 2.54; } },
-    { from: "Inches", to: "Centimeters", tokens: ["in", "inch", "inches", '"'], fn: function (x) { return x * 2.54; } },
-    { from: "Inches", to: "Millimeters", tokens: [], fn: function (x) { return x * 25.4; } },
-    { from: "Meters", to: "Feet", tokens: ["m", "meter", "meters", "metre", "metres"], fn: function (x) { return x / 0.3048; } },
-    { from: "Feet", to: "Meters", tokens: ["ft", "foot", "feet", "'"], fn: function (x) { return x * 0.3048; } },
-    { from: "Kilometers", to: "Miles", tokens: ["km", "kilometer", "kilometers", "kilometre", "kilometres"], fn: function (x) { return x / 1.609344; } },
-    { from: "Miles", to: "Kilometers", tokens: ["mi", "mile", "miles"], fn: function (x) { return x * 1.609344; } },
-    { from: "Grams", to: "Ounces", tokens: ["g", "gram", "grams", "gramme", "grammes"], fn: function (x) { return x / 28.349523125; } },
-    { from: "Ounces", to: "Grams", tokens: ["oz", "ounce", "ounces"], fn: function (x) { return x * 28.349523125; } },
-    { from: "Kilograms", to: "Pounds", tokens: ["kg", "kilogram", "kilograms", "kilo", "kilos"], fn: function (x) { return x / 0.45359237; } },
-    { from: "Pounds", to: "Kilograms", tokens: ["lb", "lbs", "pound", "pounds"], fn: function (x) { return x * 0.45359237; } },
-    { from: "Liters", to: "US gallons", tokens: ["l", "liter", "liters", "litre", "litres"], fn: function (x) { return x / 3.785411784; } },
-    { from: "US gallons", to: "Liters", tokens: ["gal", "gallon", "gallons"], fn: function (x) { return x * 3.785411784; } },
-    { from: "Milliliters", to: "US fluid ounces", tokens: ["ml", "milliliter", "milliliters", "millilitre", "millilitres"], fn: function (x) { return x / 29.5735295625; } },
-    { from: "US fluid ounces", to: "Milliliters", tokens: ["floz", "fluidounce", "fluidounces"], fn: function (x) { return x * 29.5735295625; } },
-    { from: "km/h", to: "mph", tokens: ["kmh", "kph", "kmph"], fn: function (x) { return x / 1.609344; } },
-    { from: "mph", to: "km/h", tokens: ["mph", "mih"], fn: function (x) { return x * 1.609344; } },
-    { from: "Square meters", to: "Square feet", tokens: ["m2", "sqm", "squaremeter", "squaremeters"], fn: function (x) { return x / 0.09290304; } },
-    { from: "Square feet", to: "Square meters", tokens: ["ft2", "sqft", "squarefoot", "squarefeet"], fn: function (x) { return x * 0.09290304; } },
-    { from: "Hectares", to: "Acres", tokens: ["ha", "hectare", "hectares"], fn: function (x) { return x / 0.40468564224; } },
-    { from: "Acres", to: "Hectares", tokens: ["ac", "acre", "acres"], fn: function (x) { return x * 0.40468564224; } }
+    { from: "Millimeters", to: "Inches", fn: function (x) { return x / 25.4; } },
+    { from: "Inches", to: "Millimeters", fn: function (x) { return x * 25.4; } },
+    { from: "Centimeters", to: "Inches", fn: function (x) { return x / 2.54; } },
+    { from: "Inches", to: "Centimeters", fn: function (x) { return x * 2.54; } },
+    { from: "Meters", to: "Feet", fn: function (x) { return x / 0.3048; } },
+    { from: "Feet", to: "Meters", fn: function (x) { return x * 0.3048; } },
+    { from: "Kilometers", to: "Miles", fn: function (x) { return x / 1.609344; } },
+    { from: "Miles", to: "Kilometers", fn: function (x) { return x * 1.609344; } },
+    { from: "Grams", to: "Ounces", fn: function (x) { return x / 28.349523125; } },
+    { from: "Ounces", to: "Grams", fn: function (x) { return x * 28.349523125; } },
+    { from: "Kilograms", to: "Pounds", fn: function (x) { return x / 0.45359237; } },
+    { from: "Pounds", to: "Kilograms", fn: function (x) { return x * 0.45359237; } },
+    { from: "Liters", to: "US gallons", fn: function (x) { return x / 3.785411784; } },
+    { from: "US gallons", to: "Liters", fn: function (x) { return x * 3.785411784; } },
+    { from: "Milliliters", to: "US fluid ounces", fn: function (x) { return x / 29.5735295625; } },
+    { from: "US fluid ounces", to: "Milliliters", fn: function (x) { return x * 29.5735295625; } },
+    { from: "km/h", to: "mph", fn: function (x) { return x / 1.609344; } },
+    { from: "mph", to: "km/h", fn: function (x) { return x * 1.609344; } },
+    { from: "Square meters", to: "Square feet", fn: function (x) { return x / 0.09290304; } },
+    { from: "Square feet", to: "Square meters", fn: function (x) { return x * 0.09290304; } },
+    { from: "Hectares", to: "Acres", fn: function (x) { return x / 0.40468564224; } },
+    { from: "Acres", to: "Hectares", fn: function (x) { return x * 0.40468564224; } },
+    { from: "Celsius", to: "Fahrenheit", fn: function (x) { return x * 9 / 5 + 32; } },
+    { from: "Fahrenheit", to: "Celsius", fn: function (x) { return (x - 32) * 5 / 9; } },
+    { from: "Celsius", to: "Kelvin", fn: function (x) { return x + 273.15; } },
+    { from: "Kelvin", to: "Celsius", fn: function (x) { return x - 273.15; } }
   ];
 
   var sel = document.getElementById("cv-pair");
   var input = document.getElementById("cv-input");
   var output = document.getElementById("cv-output");
-  var hintEl = document.getElementById("cv-hint");
 
   PAIRS.forEach(function (p, i) {
     var o = document.createElement("option");
@@ -124,40 +120,9 @@
     return parseFloat(n.toPrecision(7)).toString();
   }
 
-  function parse(s) {
-    var m = s.trim().match(/^([+-]?(?:\d+\.?\d*|\.\d+))\s*(.*)$/);
-    if (!m) return null;
-    var rawToken = m[2].trim();
-    var token = rawToken.toLowerCase().replace(/\s+/g, "").replace(/\//g, "").replace(/²/g, "2").replace(/°/g, "");
-    return { num: parseFloat(m[1]), token: token, rawToken: rawToken };
-  }
-
-  function pairForToken(token) {
-    for (var i = 0; i < PAIRS.length; i++) {
-      if (PAIRS[i].tokens.indexOf(token) !== -1) return i;
-    }
-    return -1;
-  }
-
   function render() {
-    var p = parse(input.value);
-    hintEl.textContent = "";
-    if (p && p.token) {
-      var idx = pairForToken(p.token);
-      if (idx === -1) {
-        hintEl.textContent = "Don't know the unit “" + p.rawToken + "” — pick from the list, or try mm, cm, kg, l, mph…";
-      } else if (String(idx) !== sel.value) {
-        sel.value = idx;
-      }
-    }
-    var pair = PAIRS[sel.value];
-    var num = p ? p.num : NaN;
-    output.textContent = isNaN(num) ? "" : fmt(pair.fn(num));
-  }
-
-  function flash(btn, msg, back) {
-    btn.textContent = msg;
-    setTimeout(function () { btn.textContent = back; }, 1200);
+    var num = parseFloat(input.value);
+    output.textContent = isNaN(num) ? "" : fmt(PAIRS[sel.value].fn(num));
   }
 
   function legacyCopy(text) {
@@ -190,8 +155,9 @@
     var text = output.textContent;
     if (!text) return;
     var done = function (ok) {
-      if (ok) { flash(btn, "copied", "copy"); }
-      else { selectText(output); flash(btn, "Ctrl+C", "copy"); }
+      btn.textContent = ok ? "copied" : "Ctrl+C";
+      if (!ok) selectText(output);
+      setTimeout(function () { btn.textContent = "copy"; }, 1200);
     };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(legacyCopy(text)); });
