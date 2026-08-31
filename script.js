@@ -1,6 +1,8 @@
 // Theme toggle. The initial theme is already set (before paint) by the
 // inline snippet in each page's <head>; this just wires up the button.
 
+var VERSION = "v0.1.0"; // bump on every push
+
 function currentTheme() {
   var attr = document.documentElement.getAttribute('data-theme');
   if (attr === 'light' || attr === 'dark') return attr;
@@ -14,8 +16,12 @@ function setTheme(theme) {
 
 document.addEventListener('DOMContentLoaded', function () {
   var btn = document.querySelector('[data-theme-toggle]');
-  if (!btn) return;
-  btn.addEventListener('click', function () {
-    setTheme(currentTheme() === 'dark' ? 'light' : 'dark');
-  });
+  if (btn) {
+    btn.addEventListener('click', function () {
+      setTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+    });
+  }
+
+  var credit = document.querySelector('.footer-inner > div');
+  if (credit) credit.textContent = credit.textContent + ' · ' + VERSION;
 });
