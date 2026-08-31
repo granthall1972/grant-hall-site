@@ -38,7 +38,7 @@
     <a class="back-link" href="tools.html">&larr; Tools</a>
     <div class="page-head">
       <h1>Transfer</h1>
-      <p>Direct browser-to-browser file transfer. No upload — the file goes straight between the two of you. Trade the codes over any chat.</p>
+      <p>Direct browser-to-browser file transfer. No upload — the file goes straight between the two of you. Trade the codes as text or by QR.</p>
     </div>
 
     <div class="xfer">
@@ -56,25 +56,41 @@
         <div class="xfer-step">
           <span>2. Send this code to the other person</span>
           <textarea id="send-offer" class="xfer-code" rows="4" readonly placeholder="appears here"></textarea>
-          <button type="button" class="xfer-copy" data-copy="send-offer">copy</button>
+          <div class="xfer-actions">
+            <button type="button" class="xfer-copy" data-copy="send-offer">copy</button>
+            <button type="button" class="xfer-qrbtn" data-qr="send-offer" data-qr-target="send-offer-qr">show QR</button>
+          </div>
+          <div id="send-offer-qr" class="xfer-qr" hidden></div>
         </div>
         <div class="xfer-step">
-          <span>3. Paste their reply code, then connect</span>
+          <span>3. Paste their reply code (or scan it), then connect</span>
           <textarea id="send-answer" class="xfer-code" rows="4" placeholder="paste reply code"></textarea>
+          <div class="xfer-actions">
+            <button type="button" class="xfer-scanbtn" data-scan="send-answer" data-video="send-video">scan QR</button>
+          </div>
+          <video id="send-video" class="xfer-video" muted playsinline hidden></video>
         </div>
         <button type="button" id="send-connect" class="xfer-btn">Connect &amp; send</button>
       </section>
 
       <section id="recv-panel" hidden>
         <div class="xfer-step">
-          <span>1. Paste the code you were given</span>
+          <span>1. Paste the code you were given (or scan it)</span>
           <textarea id="recv-offer" class="xfer-code" rows="4" placeholder="paste offer code"></textarea>
+          <div class="xfer-actions">
+            <button type="button" class="xfer-scanbtn" data-scan="recv-offer" data-video="recv-video">scan QR</button>
+          </div>
+          <video id="recv-video" class="xfer-video" muted playsinline hidden></video>
         </div>
         <button type="button" id="recv-make" class="xfer-btn">Create reply code</button>
         <div class="xfer-step">
           <span>2. Send this reply code back to the sender</span>
           <textarea id="recv-answer" class="xfer-code" rows="4" readonly placeholder="appears here"></textarea>
-          <button type="button" class="xfer-copy" data-copy="recv-answer">copy</button>
+          <div class="xfer-actions">
+            <button type="button" class="xfer-copy" data-copy="recv-answer">copy</button>
+            <button type="button" class="xfer-qrbtn" data-qr="recv-answer" data-qr-target="recv-answer-qr">show QR</button>
+          </div>
+          <div id="recv-answer-qr" class="xfer-qr" hidden></div>
         </div>
       </section>
 
@@ -96,6 +112,7 @@
 </footer>
 
 <script src="script.js" defer></script>
+<script src="qrcode.min.js"></script>
 <script>
 (function () {
   var RTC_CONFIG = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
@@ -119,11 +136,48 @@
     return (n / 1073741824).toFixed(2) + " GB";
   }
 
-  function encode(desc) { return btoa(JSON.stringify(desc)); }
-  function decode(str) { return JSON.parse(atob(str.trim())); }
+  /* ---- Code encoding: deflate + base64, tagged. Falls back to raw base64
+         where CompressionStream is missing. ---- */
+  function b64FromBytes(bytes) {
+    var s = "";
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s);
+  }
+  function bytesFromB64(b64) {
+    var s = atob(b64), out = new Uint8Array(s.length);
+    for (var i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+    return out;
+  }
+  async function deflate(str) {
+    var cs = new CompressionStream("deflate-raw");
+    var w = cs.writable.getWriter();
+    w.write(new TextEncoder().encode(str));
+    w.close();
+    return new Uint8Array(await new Response(cs.readable).arrayBuffer());
+  }
+  async function inflate(bytes) {
+    var ds = new DecompressionStream("deflate-raw");
+    var w = ds.writable.getWriter();
+    w.write(bytes);
+    w.close();
+    return new TextDecoder().decode(await new Response(ds.readable).arrayBuffer());
+  }
+  async function encodeDesc(desc) {
+    var json = JSON.stringify(desc);
+    if (typeof CompressionStream === "function") {
+      try { return "c" + b64FromBytes(await deflate(json)); } catch (e) { /* fall through */ }
+    }
+    return "r" + btoa(json);
+  }
+  async function decodeDesc(str) {
+    str = (str || "").trim();
+    var tag = str.charAt(0), body = str.slice(1);
+    if (tag === "c") return JSON.parse(await inflate(bytesFromB64(body)));
+    if (tag === "r") return JSON.parse(atob(body));
+    return JSON.parse(atob(str)); // legacy untagged
+  }
 
-  // Wait for ICE candidates to finish gathering so the code is self-contained
-  // (no trickle). Falls back to a timeout in case 'complete' never fires.
+  // Non-trickle ICE: wait for gathering to finish so each code is self-contained.
   function waitIce(pc) {
     return new Promise(function (resolve) {
       if (pc.iceGatheringState === "complete") return resolve();
@@ -163,14 +217,14 @@
     sendDc.addEventListener("close", function () { status("Channel closed."); });
     await sendPc.setLocalDescription(await sendPc.createOffer());
     await waitIce(sendPc);
-    $("send-offer").value = encode(sendPc.localDescription);
+    $("send-offer").value = await encodeDesc(sendPc.localDescription);
     status("Offer code ready. Send it over, then paste their reply.");
   });
 
   $("send-connect").addEventListener("click", async function () {
     if (!sendPc) { status("Create the offer code first."); return; }
     try {
-      await sendPc.setRemoteDescription(decode($("send-answer").value));
+      await sendPc.setRemoteDescription(await decodeDesc($("send-answer").value));
       status("Connecting…");
     } catch (e) {
       status("That reply code didn't parse.");
@@ -204,7 +258,7 @@
 
   $("recv-make").addEventListener("click", async function () {
     try {
-      var offer = decode($("recv-offer").value);
+      var offer = await decodeDesc($("recv-offer").value);
       recvPc = new RTCPeerConnection(RTC_CONFIG);
       wirePc(recvPc);
       recvPc.addEventListener("datachannel", function (ev) {
@@ -218,7 +272,7 @@
       await recvPc.setRemoteDescription(offer);
       await recvPc.setLocalDescription(await recvPc.createAnswer());
       await waitIce(recvPc);
-      $("recv-answer").value = encode(recvPc.localDescription);
+      $("recv-answer").value = await encodeDesc(recvPc.localDescription);
       status("Reply code ready. Send it back to the sender.");
     } catch (e) {
       status("That offer code didn't parse.");
@@ -250,7 +304,7 @@
     status("Received " + fmtBytes(meta.size) + ".");
   }
 
-  /* ---- Mode toggle + copy ---- */
+  /* ---- Mode toggle ---- */
   var modes = document.querySelectorAll(".xfer-mode");
   modes.forEach(function (b) {
     b.addEventListener("click", function () {
@@ -261,6 +315,7 @@
     });
   });
 
+  /* ---- Copy ---- */
   document.querySelectorAll(".xfer-copy").forEach(function (btn) {
     btn.addEventListener("click", function () {
       var el = $(btn.getAttribute("data-copy"));
@@ -276,6 +331,90 @@
       } else {
         el.select();
         try { flash(document.execCommand("copy")); } catch (e) { flash(false); }
+      }
+    });
+  });
+
+  /* ---- QR: show ---- */
+  document.querySelectorAll(".xfer-qrbtn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var text = $(btn.getAttribute("data-qr")).value;
+      var target = $(btn.getAttribute("data-qr-target"));
+      if (!text) { status("Nothing to show yet."); return; }
+      if (!target.hidden) {
+        target.hidden = true;
+        target.innerHTML = "";
+        btn.textContent = "show QR";
+        return;
+      }
+      target.innerHTML = "";
+      if (typeof qrcode !== "function") { target.textContent = "QR library didn't load."; }
+      else {
+        try {
+          var qr = qrcode(0, "L");
+          qr.addData(text);
+          qr.make();
+          target.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 4, scalable: true });
+        } catch (e) {
+          target.textContent = "Code is too big for one QR — use the text.";
+        }
+      }
+      target.hidden = false;
+      btn.textContent = "hide QR";
+    });
+  });
+
+  /* ---- QR: scan (BarcodeDetector only) ---- */
+  var activeScan = null;
+  document.querySelectorAll(".xfer-scanbtn").forEach(function (btn) {
+    btn.addEventListener("click", async function () {
+      var target = $(btn.getAttribute("data-scan"));
+      var video = $(btn.getAttribute("data-video"));
+
+      if (activeScan) {
+        activeScan.stop();
+        if (activeScan.btn === btn) { activeScan = null; return; }
+        activeScan = null;
+      }
+      if (!("BarcodeDetector" in window)) {
+        status("This browser can't scan QR codes — paste the text code instead.");
+        return;
+      }
+      try {
+        var formats = await window.BarcodeDetector.getSupportedFormats();
+        if (formats.indexOf("qr_code") < 0) { status("QR scanning isn't available here — use the text code."); return; }
+        var detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+        var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        video.srcObject = stream;
+        video.hidden = false;
+        await video.play();
+        btn.textContent = "stop scan";
+        var stopped = false;
+        activeScan = {
+          btn: btn,
+          stop: function () {
+            stopped = true;
+            stream.getTracks().forEach(function (t) { t.stop(); });
+            video.srcObject = null;
+            video.hidden = true;
+            btn.textContent = "scan QR";
+          }
+        };
+        var tick = function () {
+          if (stopped) return;
+          detector.detect(video).then(function (codes) {
+            if (codes.length) {
+              target.value = codes[0].rawValue;
+              status("Scanned.");
+              if (activeScan) { activeScan.stop(); activeScan = null; }
+            } else {
+              requestAnimationFrame(tick);
+            }
+          }).catch(function () { requestAnimationFrame(tick); });
+        };
+        requestAnimationFrame(tick);
+      } catch (e) {
+        status("Couldn't start the camera: " + (e && e.message ? e.message : e));
       }
     });
   });
