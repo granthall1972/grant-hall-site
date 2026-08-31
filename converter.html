@@ -38,22 +38,27 @@
     <a class="back-link" href="tools.html">&larr; Tools</a>
     <div class="page-head">
       <h1>Converter</h1>
-      <p>Metric &harr; imperial, plus temperature. Pick a pair, type a number.</p>
+      <p>Type a value with its unit, like <code>33mm</code>, and it picks the conversion. Or choose one from the list and just type numbers.</p>
     </div>
 
     <div class="converter">
-      <select id="cv-pair" class="cv-select" aria-label="Conversion type"></select>
+      <select id="cv-pair" class="cv-select" aria-label="Conversion"></select>
       <div class="cv-row">
-        <label class="cv-field">
-          <input id="cv-input" class="cv-input" type="number" inputmode="decimal" step="any" value="1">
-          <span id="cv-from" class="cv-unit"></span>
-        </label>
-        <button id="cv-swap" class="cv-swap" type="button" aria-label="Swap direction">&#8646;</button>
-        <label class="cv-field">
-          <output id="cv-output" class="cv-input cv-output">1</output>
-          <span id="cv-to" class="cv-unit"></span>
-        </label>
+        <div class="cv-field">
+          <div class="cv-inputwrap">
+            <input id="cv-input" class="cv-input" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" value="33mm">
+            <button id="cv-paste" class="cv-btn" type="button">paste</button>
+          </div>
+        </div>
+        <span class="cv-arrow">&rarr;</span>
+        <div class="cv-field">
+          <div class="cv-inputwrap">
+            <output id="cv-output" class="cv-input cv-output"></output>
+            <button id="cv-copy" class="cv-btn" type="button">copy</button>
+          </div>
+        </div>
       </div>
+      <p id="cv-hint" class="cv-hint"></p>
     </div>
   </div>
 </main>
@@ -71,39 +76,47 @@
 <script src="script.js" defer></script>
 <script>
 (function () {
+  // Each entry is one directional conversion and one dropdown option.
+  // `tokens` are the unit strings that auto-select it when typed. An empty
+  // list means the entry is only reachable by picking it from the dropdown.
   var PAIRS = [
-    { a: "Celsius", b: "Fahrenheit", toB: function (c) { return c * 9 / 5 + 32; }, toA: function (f) { return (f - 32) * 5 / 9; } },
-    { a: "Celsius", b: "Kelvin", toB: function (c) { return c + 273.15; }, toA: function (k) { return k - 273.15; } },
-    { a: "Centimeters", b: "Inches", f: 2.54 },
-    { a: "Meters", b: "Feet", f: 0.3048 },
-    { a: "Kilometers", b: "Miles", f: 1.609344 },
-    { a: "Grams", b: "Ounces", f: 28.349523125 },
-    { a: "Kilograms", b: "Pounds", f: 0.45359237 },
-    { a: "Liters", b: "US gallons", f: 3.785411784 },
-    { a: "Milliliters", b: "US fluid ounces", f: 29.5735295625 },
-    { a: "km/h", b: "mph", f: 1.609344 },
-    { a: "Square meters", b: "Square feet", f: 0.09290304 },
-    { a: "Hectares", b: "Acres", f: 0.40468564224 }
+    { from: "Celsius", to: "Fahrenheit", tokens: ["c", "celsius", "centigrade"], fn: function (x) { return x * 9 / 5 + 32; } },
+    { from: "Fahrenheit", to: "Celsius", tokens: ["f", "fahrenheit"], fn: function (x) { return (x - 32) * 5 / 9; } },
+    { from: "Celsius", to: "Kelvin", tokens: [], fn: function (x) { return x + 273.15; } },
+    { from: "Kelvin", to: "Celsius", tokens: ["k", "kelvin"], fn: function (x) { return x - 273.15; } },
+    { from: "Millimeters", to: "Inches", tokens: ["mm", "millimeter", "millimeters", "millimetre", "millimetres"], fn: function (x) { return x / 25.4; } },
+    { from: "Centimeters", to: "Inches", tokens: ["cm", "centimeter", "centimeters", "centimetre", "centimetres"], fn: function (x) { return x / 2.54; } },
+    { from: "Inches", to: "Centimeters", tokens: ["in", "inch", "inches", '"'], fn: function (x) { return x * 2.54; } },
+    { from: "Inches", to: "Millimeters", tokens: [], fn: function (x) { return x * 25.4; } },
+    { from: "Meters", to: "Feet", tokens: ["m", "meter", "meters", "metre", "metres"], fn: function (x) { return x / 0.3048; } },
+    { from: "Feet", to: "Meters", tokens: ["ft", "foot", "feet", "'"], fn: function (x) { return x * 0.3048; } },
+    { from: "Kilometers", to: "Miles", tokens: ["km", "kilometer", "kilometers", "kilometre", "kilometres"], fn: function (x) { return x / 1.609344; } },
+    { from: "Miles", to: "Kilometers", tokens: ["mi", "mile", "miles"], fn: function (x) { return x * 1.609344; } },
+    { from: "Grams", to: "Ounces", tokens: ["g", "gram", "grams", "gramme", "grammes"], fn: function (x) { return x / 28.349523125; } },
+    { from: "Ounces", to: "Grams", tokens: ["oz", "ounce", "ounces"], fn: function (x) { return x * 28.349523125; } },
+    { from: "Kilograms", to: "Pounds", tokens: ["kg", "kilogram", "kilograms", "kilo", "kilos"], fn: function (x) { return x / 0.45359237; } },
+    { from: "Pounds", to: "Kilograms", tokens: ["lb", "lbs", "pound", "pounds"], fn: function (x) { return x * 0.45359237; } },
+    { from: "Liters", to: "US gallons", tokens: ["l", "liter", "liters", "litre", "litres"], fn: function (x) { return x / 3.785411784; } },
+    { from: "US gallons", to: "Liters", tokens: ["gal", "gallon", "gallons"], fn: function (x) { return x * 3.785411784; } },
+    { from: "Milliliters", to: "US fluid ounces", tokens: ["ml", "milliliter", "milliliters", "millilitre", "millilitres"], fn: function (x) { return x / 29.5735295625; } },
+    { from: "US fluid ounces", to: "Milliliters", tokens: ["floz", "fluidounce", "fluidounces"], fn: function (x) { return x * 29.5735295625; } },
+    { from: "km/h", to: "mph", tokens: ["kmh", "kph", "kmph"], fn: function (x) { return x / 1.609344; } },
+    { from: "mph", to: "km/h", tokens: ["mph", "mih"], fn: function (x) { return x * 1.609344; } },
+    { from: "Square meters", to: "Square feet", tokens: ["m2", "sqm", "squaremeter", "squaremeters"], fn: function (x) { return x / 0.09290304; } },
+    { from: "Square feet", to: "Square meters", tokens: ["ft2", "sqft", "squarefoot", "squarefeet"], fn: function (x) { return x * 0.09290304; } },
+    { from: "Hectares", to: "Acres", tokens: ["ha", "hectare", "hectares"], fn: function (x) { return x / 0.40468564224; } },
+    { from: "Acres", to: "Hectares", tokens: ["ac", "acre", "acres"], fn: function (x) { return x * 0.40468564224; } }
   ];
-  PAIRS.forEach(function (p) {
-    if (p.f) {
-      p.toB = function (x) { return x / p.f; };
-      p.toA = function (x) { return x * p.f; };
-    }
-  });
 
   var sel = document.getElementById("cv-pair");
   var input = document.getElementById("cv-input");
   var output = document.getElementById("cv-output");
-  var fromEl = document.getElementById("cv-from");
-  var toEl = document.getElementById("cv-to");
-  var swapBtn = document.getElementById("cv-swap");
-  var swapped = false;
+  var hintEl = document.getElementById("cv-hint");
 
   PAIRS.forEach(function (p, i) {
     var o = document.createElement("option");
     o.value = i;
-    o.textContent = p.a + "  ⇄  " + p.b;
+    o.textContent = p.from + "  →  " + p.to;
     sel.appendChild(o);
   });
 
@@ -112,20 +125,103 @@
     return parseFloat(n.toPrecision(7)).toString();
   }
 
-  function render() {
-    var p = PAIRS[sel.value];
-    var from = swapped ? p.b : p.a;
-    var to = swapped ? p.a : p.b;
-    fromEl.textContent = from;
-    toEl.textContent = to;
-    var v = parseFloat(input.value);
-    if (isNaN(v)) { output.textContent = ""; return; }
-    output.textContent = fmt(swapped ? p.toA(v) : p.toB(v));
+  function parse(s) {
+    var m = s.trim().match(/^([+-]?(?:\d+\.?\d*|\.\d+))\s*(.*)$/);
+    if (!m) return null;
+    var rawToken = m[2].trim();
+    var token = rawToken.toLowerCase().replace(/\s+/g, "").replace(/\//g, "").replace(/²/g, "2").replace(/°/g, "");
+    return { num: parseFloat(m[1]), token: token, rawToken: rawToken };
   }
 
-  sel.addEventListener("change", function () { swapped = false; render(); });
+  function pairForToken(token) {
+    for (var i = 0; i < PAIRS.length; i++) {
+      if (PAIRS[i].tokens.indexOf(token) !== -1) return i;
+    }
+    return -1;
+  }
+
+  function render() {
+    var p = parse(input.value);
+    hintEl.textContent = "";
+    if (p && p.token) {
+      var idx = pairForToken(p.token);
+      if (idx === -1) {
+        hintEl.textContent = "Don't know the unit “" + p.rawToken + "” — pick from the list, or try mm, cm, kg, l, mph…";
+      } else if (String(idx) !== sel.value) {
+        sel.value = idx;
+      }
+    }
+    var pair = PAIRS[sel.value];
+    var num = p ? p.num : NaN;
+    output.textContent = isNaN(num) ? "" : fmt(pair.fn(num));
+  }
+
+  function flash(btn, msg, back) {
+    btn.textContent = msg;
+    setTimeout(function () { btn.textContent = back; }, 1200);
+  }
+
+  function legacyCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.top = "-1000px";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, ta.value.length);
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  function selectText(el) {
+    try {
+      var r = document.createRange();
+      r.selectNodeContents(el);
+      var s = window.getSelection();
+      s.removeAllRanges();
+      s.addRange(r);
+    } catch (e) {}
+  }
+
+  function copyOut(btn) {
+    var text = output.textContent;
+    if (!text) return;
+    var done = function (ok) {
+      if (ok) { flash(btn, "copied", "copy"); }
+      else { selectText(output); flash(btn, "Ctrl+C", "copy"); }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(legacyCopy(text)); });
+    } else {
+      done(legacyCopy(text));
+    }
+  }
+
+  function pasteIn(btn) {
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(function (t) {
+        input.value = t.trim();
+        render();
+        input.focus();
+        flash(btn, "pasted", "paste");
+      }, function () {
+        input.focus();
+        flash(btn, "Ctrl+V", "paste");
+      });
+    } else {
+      input.focus();
+      flash(btn, "Ctrl+V", "paste");
+    }
+  }
+
+  sel.addEventListener("change", render);
   input.addEventListener("input", render);
-  swapBtn.addEventListener("click", function () { swapped = !swapped; render(); });
+  document.getElementById("cv-copy").addEventListener("click", function () { copyOut(this); });
+  document.getElementById("cv-paste").addEventListener("click", function () { pasteIn(this); });
   render();
 })();
 </script>
