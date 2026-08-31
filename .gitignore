@@ -5,3 +5,6 @@ Thumbs.db
 .idea/
 .vscode/
 node_modules/
+
+# AI session instructions, local only
+instructions.md

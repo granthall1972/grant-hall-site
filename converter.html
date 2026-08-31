@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Converter — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>Converter</h1>
+      <p>Metric &harr; imperial, plus temperature. Pick a pair, type a number.</p>
+    </div>
+
+    <div class="converter">
+      <select id="cv-pair" class="cv-select" aria-label="Conversion type"></select>
+      <div class="cv-row">
+        <label class="cv-field">
+          <input id="cv-input" class="cv-input" type="number" inputmode="decimal" step="any" value="1">
+          <span id="cv-from" class="cv-unit"></span>
+        </label>
+        <button id="cv-swap" class="cv-swap" type="button" aria-label="Swap direction">&#8646;</button>
+        <label class="cv-field">
+          <output id="cv-output" class="cv-input cv-output">1</output>
+          <span id="cv-to" class="cv-unit"></span>
+        </label>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+<script>
+(function () {
+  var PAIRS = [
+    { a: "Celsius", b: "Fahrenheit", toB: function (c) { return c * 9 / 5 + 32; }, toA: function (f) { return (f - 32) * 5 / 9; } },
+    { a: "Celsius", b: "Kelvin", toB: function (c) { return c + 273.15; }, toA: function (k) { return k - 273.15; } },
+    { a: "Centimeters", b: "Inches", f: 2.54 },
+    { a: "Meters", b: "Feet", f: 0.3048 },
+    { a: "Kilometers", b: "Miles", f: 1.609344 },
+    { a: "Grams", b: "Ounces", f: 28.349523125 },
+    { a: "Kilograms", b: "Pounds", f: 0.45359237 },
+    { a: "Liters", b: "US gallons", f: 3.785411784 },
+    { a: "Milliliters", b: "US fluid ounces", f: 29.5735295625 },
+    { a: "km/h", b: "mph", f: 1.609344 },
+    { a: "Square meters", b: "Square feet", f: 0.09290304 },
+    { a: "Hectares", b: "Acres", f: 0.40468564224 }
+  ];
+  PAIRS.forEach(function (p) {
+    if (p.f) {
+      p.toB = function (x) { return x / p.f; };
+      p.toA = function (x) { return x * p.f; };
+    }
+  });
+
+  var sel = document.getElementById("cv-pair");
+  var input = document.getElementById("cv-input");
+  var output = document.getElementById("cv-output");
+  var fromEl = document.getElementById("cv-from");
+  var toEl = document.getElementById("cv-to");
+  var swapBtn = document.getElementById("cv-swap");
+  var swapped = false;
+
+  PAIRS.forEach(function (p, i) {
+    var o = document.createElement("option");
+    o.value = i;
+    o.textContent = p.a + "  ⇄  " + p.b;
+    sel.appendChild(o);
+  });
+
+  function fmt(n) {
+    if (!isFinite(n)) return "–";
+    return parseFloat(n.toPrecision(7)).toString();
+  }
+
+  function render() {
+    var p = PAIRS[sel.value];
+    var from = swapped ? p.b : p.a;
+    var to = swapped ? p.a : p.b;
+    fromEl.textContent = from;
+    toEl.textContent = to;
+    var v = parseFloat(input.value);
+    if (isNaN(v)) { output.textContent = ""; return; }
+    output.textContent = fmt(swapped ? p.toA(v) : p.toB(v));
+  }
+
+  sel.addEventListener("change", function () { swapped = false; render(); });
+  input.addEventListener("input", render);
+  swapBtn.addEventListener("click", function () { swapped = !swapped; render(); });
+  render();
+})();
+</script>
+</body>
+</html>
