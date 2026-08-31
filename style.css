@@ -228,6 +228,42 @@ footer.site { border-top: 1px solid var(--border); }
 .xfer-qr { margin-top: 12px; font-size: 12px; color: var(--muted); }
 .xfer-qr svg { width: 100%; max-width: 300px; height: auto; display: block; background: #fff; padding: 8px; }
 .xfer-video { width: 100%; max-width: 320px; margin-top: 12px; border: 1px solid var(--border); }
+
+.fmt { max-width: 720px; }
+.fmt-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
+.fmt-select {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+}
+.fmt-detected { font-size: 12px; color: var(--muted); }
+.fmt-area {
+  display: block;
+  width: 100%;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  resize: vertical;
+}
+.fmt-actions { display: flex; gap: 8px; margin: 12px 0; }
+.fmt-btn {
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  background: none;
+  border: 1px solid var(--accent);
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.fmt-btn:hover { opacity: 0.65; }
+.fmt-btn-sub { color: var(--muted); border-color: var(--border); }
+.fmt-msg { font-size: 12px; color: var(--accent); min-height: 1.2em; margin-top: 8px; white-space: pre-wrap; }
 .xfer-btn {
   font: inherit;
   font-size: 13px;
