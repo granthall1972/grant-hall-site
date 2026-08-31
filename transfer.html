@@ -113,6 +113,7 @@
 
 <script src="script.js" defer></script>
 <script src="qrcode.min.js"></script>
+<script src="jsQR.min.js"></script>
 <script>
 (function () {
   var RTC_CONFIG = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
@@ -364,7 +365,55 @@
     });
   });
 
-  /* ---- QR: scan (BarcodeDetector only) ---- */
+  /* ---- QR: scan. Uses the native BarcodeDetector where present, else jsQR
+         decoding video frames off a canvas (covers iOS / WebKit). ---- */
+  function startDecoder(video, onResult) {
+    var stopped = false;
+
+    function bdLoop(detector) {
+      if (stopped) return;
+      detector.detect(video).then(function (codes) {
+        if (stopped) return;
+        if (codes.length && codes[0].rawValue) onResult(codes[0].rawValue);
+        else requestAnimationFrame(function () { bdLoop(detector); });
+      }).catch(function () { requestAnimationFrame(function () { bdLoop(detector); }); });
+    }
+
+    function jsqrLoop() {
+      if (typeof jsQR !== "function") {
+        status("QR scanning library didn't load — paste the text code instead.");
+        return;
+      }
+      var canvas = document.createElement("canvas");
+      var ctx = canvas.getContext("2d", { willReadFrequently: true });
+      var loop = function () {
+        if (stopped) return;
+        if (video.videoWidth) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          var code = jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+          if (code && code.data) { onResult(code.data); return; }
+        }
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    }
+
+    if ("BarcodeDetector" in window) {
+      window.BarcodeDetector.getSupportedFormats().then(function (fmts) {
+        if (stopped) return;
+        if (fmts.indexOf("qr_code") >= 0) bdLoop(new window.BarcodeDetector({ formats: ["qr_code"] }));
+        else jsqrLoop();
+      }).catch(jsqrLoop);
+    } else {
+      jsqrLoop();
+    }
+
+    return { stop: function () { stopped = true; } };
+  }
+
   var activeScan = null;
   document.querySelectorAll(".xfer-scanbtn").forEach(function (btn) {
     btn.addEventListener("click", async function () {
@@ -372,47 +421,32 @@
       var video = $(btn.getAttribute("data-video"));
 
       if (activeScan) {
-        activeScan.stop();
-        if (activeScan.btn === btn) { activeScan = null; return; }
+        var wasThis = activeScan.btn === btn;
+        activeScan.teardown();
         activeScan = null;
-      }
-      if (!("BarcodeDetector" in window)) {
-        status("This browser can't scan QR codes — paste the text code instead.");
-        return;
+        if (wasThis) return;
       }
       try {
-        var formats = await window.BarcodeDetector.getSupportedFormats();
-        if (formats.indexOf("qr_code") < 0) { status("QR scanning isn't available here — use the text code."); return; }
-        var detector = new window.BarcodeDetector({ formats: ["qr_code"] });
         var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         video.srcObject = stream;
         video.hidden = false;
         await video.play();
         btn.textContent = "stop scan";
-        var stopped = false;
+        var decoder = startDecoder(video, function (value) {
+          target.value = value;
+          status("Scanned.");
+          if (activeScan) { activeScan.teardown(); activeScan = null; }
+        });
         activeScan = {
           btn: btn,
-          stop: function () {
-            stopped = true;
+          teardown: function () {
+            decoder.stop();
             stream.getTracks().forEach(function (t) { t.stop(); });
             video.srcObject = null;
             video.hidden = true;
             btn.textContent = "scan QR";
           }
         };
-        var tick = function () {
-          if (stopped) return;
-          detector.detect(video).then(function (codes) {
-            if (codes.length) {
-              target.value = codes[0].rawValue;
-              status("Scanned.");
-              if (activeScan) { activeScan.stop(); activeScan = null; }
-            } else {
-              requestAnimationFrame(tick);
-            }
-          }).catch(function () { requestAnimationFrame(tick); });
-        };
-        requestAnimationFrame(tick);
       } catch (e) {
         status("Couldn't start the camera: " + (e && e.message ? e.message : e));
       }
