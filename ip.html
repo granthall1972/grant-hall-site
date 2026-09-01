@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IP Lookup — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css?v=13">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>IP Lookup</h1>
+      <p>Your own address, or any IP or host you type in. Runs in the browser.</p>
+    </div>
+
+    <div class="tool">
+      <div class="tool-row">
+        <span>IP address or host (blank = your own)</span>
+        <input type="text" id="q" class="tool-field" placeholder="8.8.8.8, 2606:4700:4700::1111, or example.com" spellcheck="false" autocomplete="off">
+      </div>
+      <div class="tool-actions">
+        <button type="button" id="lookup" class="tool-btn">Look up</button>
+        <button type="button" id="mine" class="tool-btn sub">my IP</button>
+        <button type="button" id="copy" class="tool-btn sub">copy</button>
+      </div>
+
+      <div id="msg" class="tool-msg"></div>
+      <div class="jwt-claims" id="out"></div>
+
+      <p class="tool-note">Lookups go straight from your browser to <b>ipwho.is</b> (free, no key, CORS enabled). Nothing is sent to or stored on this site. Geo-IP is an estimate &mdash; country is usually right, city often is not.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js?v=13" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var last = null;
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function row(k, v) {
+    return (v === null || v === undefined || v === "") ? "" : "<div><b>" + k + "</b> &nbsp; " + v + "</div>";
+  }
+
+  function render(d) {
+    var conn = d.connection || {};
+    var tz = d.timezone || {};
+    var flag = d.flag && d.flag.emoji ? d.flag.emoji + " " : "";
+    var coords = "";
+    if (d.latitude !== undefined && d.longitude !== undefined && d.latitude !== null) {
+      coords = esc(d.latitude + ", " + d.longitude) +
+        ' &nbsp; <a href="https://www.openstreetmap.org/?mlat=' + encodeURIComponent(d.latitude) +
+        "&mlon=" + encodeURIComponent(d.longitude) + "#map=11/" + encodeURIComponent(d.latitude) +
+        "/" + encodeURIComponent(d.longitude) + '" target="_blank" rel="noopener">map</a>';
+    }
+    var when = tz.current_time ? String(tz.current_time).replace("T", " ").slice(0, 19) : "";
+
+    $("out").innerHTML =
+      row("IP", esc(d.ip) + (d.type ? " (" + esc(d.type) + ")" : "")) +
+      row("Country", flag + esc(d.country || "") + (d.country_code ? " (" + esc(d.country_code) + ")" : "") + (d.is_eu ? " &middot; EU" : "")) +
+      row("Region", esc(d.region || "")) +
+      row("City", esc(d.city || "")) +
+      row("Postal", esc(d.postal || "")) +
+      row("Coordinates", coords) +
+      row("Timezone", esc(tz.id || "") + (tz.utc ? " (UTC" + esc(tz.utc) + ")" : "") + (when ? " &middot; " + esc(when) : "")) +
+      row("ISP", esc(conn.isp || "")) +
+      row("Organization", esc(conn.org || "")) +
+      row("ASN", conn.asn ? "AS" + esc(conn.asn) + (conn.domain ? " &middot; " + esc(conn.domain) : "") : "") +
+      row("Continent", esc(d.continent || "")) +
+      row("Calling code", d.calling_code ? "+" + esc(d.calling_code) : "");
+  }
+
+  function summary(d) {
+    var conn = d.connection || {}, tz = d.timezone || {};
+    return [
+      "IP: " + d.ip + (d.type ? " (" + d.type + ")" : ""),
+      "Location: " + [d.city, d.region, d.country].filter(Boolean).join(", "),
+      "Coordinates: " + d.latitude + ", " + d.longitude,
+      "Timezone: " + (tz.id || "") + (tz.utc ? " (UTC" + tz.utc + ")" : ""),
+      "ISP: " + (conn.isp || ""),
+      "Org: " + (conn.org || ""),
+      "ASN: " + (conn.asn ? "AS" + conn.asn + (conn.domain ? " " + conn.domain : "") : "")
+    ].join("\n");
+  }
+
+  async function lookup(q) {
+    last = null;
+    $("out").innerHTML = "";
+    $("msg").className = "tool-msg";
+    $("msg").textContent = "Looking up…";
+    try {
+      var res = await fetch("https://ipwho.is/" + (q ? encodeURIComponent(q) : ""));
+      var d = await res.json();
+      if (!d || d.success === false) {
+        $("msg").className = "tool-msg jwt-bad";
+        $("msg").textContent = "Couldn't look that up" + (d && d.message ? ": " + d.message : ".");
+        return;
+      }
+      last = d;
+      render(d);
+      $("msg").textContent = "";
+    } catch (e) {
+      $("msg").className = "tool-msg jwt-bad";
+      $("msg").textContent = "Couldn't reach ipwho.is. Check your connection or try again shortly.";
+    }
+  }
+
+  $("lookup").addEventListener("click", function () { lookup($("q").value.trim()); });
+  $("mine").addEventListener("click", function () { $("q").value = ""; lookup(""); });
+  $("q").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); lookup($("q").value.trim()); }
+  });
+  $("copy").addEventListener("click", function () {
+    if (!last) return;
+    var btn = this, text = summary(last);
+    var done = function (ok) {
+      btn.textContent = ok ? "copied" : "Ctrl+C";
+      setTimeout(function () { btn.textContent = "copy"; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+    } else { done(false); }
+  });
+
+  lookup("");
+})();
+</script>
+</body>
+</html>
