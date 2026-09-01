@@ -14,7 +14,7 @@
 })();
 </script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -102,8 +102,6 @@
         </div>
       </div>
 
-      <div class="paint-palette" id="palette"></div>
-
       <div class="paint-save">
         <label for="fname">File name</label>
         <input type="text" id="fname" class="tool-field paint-fname" value="drawing.png" spellcheck="false" autocomplete="off">
@@ -125,7 +123,7 @@
   </div>
 </footer>
 
-<script src="script.js" defer></script>
+<script src="script.js?v=13" defer></script>
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
@@ -176,27 +174,8 @@
     });
   });
 
-  $("border").addEventListener("input", function () { borderColor = $("border").value; setActiveSwatch(null); });
+  $("border").addEventListener("input", function () { borderColor = $("border").value; });
   $("fill").addEventListener("input", function () { fillColor = $("fill").value; });
-
-  /* palette (swatch colors come from style.css, by child order) */
-  var PALETTE = ["#000000", "#ffffff", "#808080", "#c0c0c0", "#e53935", "#fb8c00", "#fdd835", "#43a047",
-                 "#00acc1", "#1e88e5", "#3949ab", "#8e24aa", "#d81b60", "#6d4c41", "#f5f5f5", "#004d40"];
-  var paletteBox = $("palette");
-  PALETTE.forEach(function (c) {
-    var b = document.createElement("button");
-    b.type = "button";
-    b.className = "pal-sw";
-    b.title = c + "  •  shift-click sets fill";
-    b.addEventListener("click", function (ev) {
-      if (ev.shiftKey) { fillColor = c; $("fill").value = c; }
-      else { borderColor = c; $("border").value = c; setActiveSwatch(b); }
-    });
-    paletteBox.appendChild(b);
-  });
-  function setActiveSwatch(el) {
-    paletteBox.querySelectorAll(".pal-sw").forEach(function (x) { x.classList.toggle("is-active", x === el); });
-  }
 
   /* freehand + shapes */
   cv.addEventListener("pointerdown", function (e) {

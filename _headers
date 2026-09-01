@@ -1,0 +1,8 @@
+# Cloudflare Pages headers
+# Force browsers to revalidate CSS/JS so deploys show up without a hard refresh.
+
+/style.css
+  Cache-Control: no-cache
+
+/script.js
+  Cache-Control: no-cache
