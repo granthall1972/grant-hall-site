@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lorem Ipsum — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css?v=13">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>Lorem Ipsum</h1>
+      <p>Placeholder text in a few flavors. Runs in the browser.</p>
+    </div>
+
+    <div class="tool">
+      <div class="tool-row">
+        <span>Flavor</span>
+        <select id="flavor" class="tool-select">
+          <option value="classic">Classic (lorem ipsum)</option>
+          <option value="tech">Tech / programming</option>
+          <option value="beer">Beer</option>
+          <option value="hipster">Hipster</option>
+          <option value="corporate">Corporate</option>
+        </select>
+      </div>
+
+      <div class="tool-row">
+        <span>Amount</span>
+        <input type="number" id="count" class="tool-field tool-num" value="4" min="1" max="200">
+        <select id="unit" class="tool-select">
+          <option value="paragraphs">paragraphs</option>
+          <option value="sentences">sentences</option>
+          <option value="words">words</option>
+        </select>
+      </div>
+
+      <label class="tool-check"><input type="checkbox" id="start" checked> start with &ldquo;Lorem ipsum dolor sit amet&hellip;&rdquo; (classic only)</label>
+      <label class="tool-check"><input type="checkbox" id="wrap"> wrap paragraphs in &lt;p&gt; tags</label>
+
+      <div class="tool-actions">
+        <button type="button" id="gen" class="tool-btn">Generate</button>
+        <button type="button" id="copy" class="tool-btn sub">copy</button>
+      </div>
+
+      <textarea id="out" class="tool-area" rows="16" readonly spellcheck="false"></textarea>
+      <div id="msg" class="tool-msg"></div>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js?v=13" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  var BANKS = {
+    classic: "lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua enim ad minim veniam quis nostrud exercitation ullamco laboris nisi aliquip ex ea commodo consequat duis aute irure voluptate velit esse cillum eu fugiat nulla pariatur excepteur sint occaecat cupidatat non proident sunt culpa qui officia deserunt mollit anim id est laborum vero eos accusamus iusto odio dignissimos ducimus blanditiis praesentium voluptatum deleniti atque corrupti quos dolores quas molestias",
+    tech: "refactor deploy rollback kubernetes container pod latency throughput async await middleware cache endpoint payload webhook idempotent serverless microservice monolith bandwidth compile lint mutex deadlock race-condition null-pointer stack-trace hotfix feature-flag tech-debt postmortem observability tracing sharding replication backpressure circuit-breaker retry backoff queue consumer producer schema migration index query optimizer heap allocation pointer buffer overflow segfault kernel syscall thread coroutine promise callback closure recursion pipeline artifact registry",
+    beer: "hops malt barley lager ale stout porter pilsner saison gose kettle-sour pint cask keg growler crowler brewery taproom fermentation yeast wort gravity attenuation abv ibu dry-hop wet-hop nitro cold-crash lupulin haze juicy crisp bitter dank resinous pour foam head lacing session crushable imperial double-dry-hopped barrel-aged bourbon-barrel adjunct lactose oats mash sparge boil whirlpool pitch flocculation",
+    hipster: "artisan sriracha kombucha vinyl fixie tote-bag cold-pressed small-batch locavore mustache beard flannel thrifted vintage retro kale quinoa banjo typewriter polaroid gentrify ethical sustainable farm-to-table pour-over single-origin mumblecore normcore tattooed hand-crafted forage pickled fermented bespoke heirloom mixtape cassette letterpress succulent terrarium meditation gluten-free vegan scooter beanie chambray raw-denim keffiyeh selvage",
+    corporate: "synergy leverage stakeholder deliverable bandwidth actionable paradigm ecosystem alignment holistic scalable streamline value-add low-hanging-fruit circle-back deep-dive move-the-needle north-star roadmap quick-win touch-base cross-functional ideate operationalize best-practice core-competency bleeding-edge disrupt pivot runway headwind tailwind optics cadence workstream empower unlock double-click table-stakes boil-the-ocean firehose bootstrapped rightsize onboarding offsite"
+  };
+  Object.keys(BANKS).forEach(function (k) { BANKS[k] = BANKS[k].split(" "); });
+
+  var FILLER = "and the a of with for to in on from by that this our your their they".split(" ");
+  var OPENER = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+
+  function rand(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+
+  function sentence(bank, filler) {
+    var n = rand(6, 16), parts = [];
+    for (var i = 0; i < n; i++) {
+      var w = (filler && i > 0 && Math.random() < 0.28) ? pick(FILLER) : pick(bank);
+      parts.push(w);
+      if (i > 2 && i < n - 2 && Math.random() < 0.07) parts[parts.length - 1] += ",";
+    }
+    var s = parts.join(" ").replace(/,\s*$/, "");
+    return s.charAt(0).toUpperCase() + s.slice(1) + ".";
+  }
+
+  function paragraph(bank, filler) {
+    var out = [];
+    for (var i = 0, n = rand(3, 6); i < n; i++) out.push(sentence(bank, filler));
+    return out.join(" ");
+  }
+
+  function generate() {
+    var flavor = $("flavor").value;
+    var bank = BANKS[flavor];
+    var filler = flavor !== "classic";
+    var count = Math.max(1, Math.min(200, parseInt($("count").value, 10) || 1));
+    $("count").value = count;
+    var unit = $("unit").value;
+
+    var paras = [];
+    if (unit === "paragraphs") {
+      for (var i = 0; i < count; i++) paras.push(paragraph(bank, filler));
+    } else if (unit === "sentences") {
+      var s = [];
+      for (var j = 0; j < count; j++) s.push(sentence(bank, filler));
+      paras.push(s.join(" "));
+    } else {
+      var words = [], guard = 0;
+      while (words.length < count && guard++ < 2000) {
+        words = words.concat(sentence(bank, filler).replace(/[.,]/g, "").split(" "));
+      }
+      words = words.slice(0, count);
+      var t = words.join(" ");
+      paras.push(t.charAt(0).toUpperCase() + t.slice(1) + ".");
+    }
+
+    if ($("start").checked && flavor === "classic" && paras.length) {
+      paras[0] = OPENER + " " + paras[0].charAt(0).toLowerCase() + paras[0].slice(1);
+    }
+
+    $("out").value = $("wrap").checked
+      ? paras.map(function (p) { return "<p>" + p + "</p>"; }).join("\n")
+      : paras.join("\n\n");
+
+    var text = $("out").value;
+    var wc = text.trim() ? text.trim().split(/\s+/).length : 0;
+    $("msg").textContent = wc + " words · " + text.length + " chars";
+  }
+
+  ["flavor", "count", "unit", "start", "wrap"].forEach(function (id) {
+    $(id).addEventListener("change", generate);
+  });
+  $("count").addEventListener("input", generate);
+  $("gen").addEventListener("click", generate);
+
+  $("copy").addEventListener("click", function () {
+    var text = $("out").value;
+    if (!text) return;
+    var btn = this;
+    var done = function (ok) {
+      btn.textContent = ok ? "copied" : "Ctrl+C";
+      setTimeout(function () { btn.textContent = "copy"; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+    } else { done(false); }
+  });
+
+  generate();
+})();
+</script>
+</body>
+</html>
