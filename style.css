@@ -476,21 +476,24 @@ html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
   padding: 8px 10px;
 }
 
-.paint-colors { display: flex; align-items: center; gap: 14px; }
-.paint-colors label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-.paint-colors input[type="color"] {
+.paint-colors { display: flex; flex-direction: column; gap: 10px; }
+.paint-color-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.paint-color-row > span { width: 46px; }
+.paint-color-row label { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.paint-color-row.is-none input[type="color"] { opacity: 0.35; }
+.paint-color-row input[type="color"] {
   -webkit-appearance: none;
   appearance: none;
-  width: 34px;
+  width: 40px;
   height: 26px;
   padding: 0;
   border: 1px solid var(--border);
   background: none;
   cursor: pointer;
 }
-.paint-colors input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
-.paint-colors input[type="color"]::-webkit-color-swatch { border: none; }
-.paint-colors input[type="color"]::-moz-color-swatch { border: none; }
+.paint-color-row input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+.paint-color-row input[type="color"]::-webkit-color-swatch { border: none; }
+.paint-color-row input[type="color"]::-moz-color-swatch { border: none; }
 
 .paint-actions { display: flex; flex-direction: column; gap: 8px; }
 .paint-actions .tool-btn { width: 100%; margin: 0; }

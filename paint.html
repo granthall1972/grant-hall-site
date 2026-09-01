@@ -88,8 +88,16 @@
           </div>
 
           <div class="paint-colors">
-            <label>Border <input type="color" id="border" value="#111111"></label>
-            <label>Fill <input type="color" id="fill" value="#ffd54a"></label>
+            <div class="paint-color-row" id="border-row">
+              <span>Border</span>
+              <input type="color" id="border" value="#e53935">
+              <label><input type="checkbox" id="border-none"> none</label>
+            </div>
+            <div class="paint-color-row is-none" id="fill-row">
+              <span>Fill</span>
+              <input type="color" id="fill" value="#ffffff">
+              <label><input type="checkbox" id="fill-none" checked> none</label>
+            </div>
           </div>
 
           <div class="paint-actions">
@@ -111,7 +119,7 @@
         <button type="button" id="save-btn" class="tool-btn">Save PNG</button>
       </div>
 
-      <p class="tool-note">Everything happens on this canvas in your browser. Nothing is uploaded. Opening an image loads it onto the canvas as a flat background; there are no layers. Text tool: pick it, click where you want the text, and type. Click away to place it, Escape to cancel. Zoom: scroll wheel over the canvas, or the magnifier (click to zoom in, Alt+click or right-click to zoom out). Middle-drag to pan. Ctrl+0, or click the magnifier again, to fit.</p>
+      <p class="tool-note">Everything happens on this canvas in your browser. Nothing is uploaded. Opening an image loads it onto the canvas as a flat background; there are no layers. Check "none" on Border or Fill to leave that part transparent (it shows whatever is already on the canvas). Text tool: pick it, click where you want the text, and type. Click away to place it, Escape to cancel. Zoom: scroll wheel over the canvas, or the magnifier (click to zoom in, Alt+click or right-click to zoom out). Middle-drag to pan. Ctrl+0, or click the magnifier again, to fit.</p>
     </div>
   </div>
 </main>
@@ -134,7 +142,8 @@
   wrap.style.position = "relative";
 
   var tool = "pencil";
-  var borderColor = "#111111", fillColor = "#ffd54a";
+  var borderColor = "#e53935", fillColor = "#ffffff";
+  var borderNone = false, fillNone = true;
   var drawing = false, startX = 0, startY = 0, lastX = 0, lastY = 0, preShape = null;
   var undoStack = [];
 
@@ -256,8 +265,22 @@
   document.addEventListener("keydown", function (e) { if (e.key === "Alt" && tool === "zoom") setZoomOutHint(true); });
   document.addEventListener("keyup", function (e) { if (e.key === "Alt") setZoomOutHint(false); });
 
-  $("border").addEventListener("input", function () { borderColor = $("border").value; });
-  $("fill").addEventListener("input", function () { fillColor = $("fill").value; });
+  $("border").addEventListener("input", function () {
+    borderColor = $("border").value;
+    if (borderNone) { borderNone = false; $("border-none").checked = false; $("border-row").classList.remove("is-none"); }
+  });
+  $("fill").addEventListener("input", function () {
+    fillColor = $("fill").value;
+    if (fillNone) { fillNone = false; $("fill-none").checked = false; $("fill-row").classList.remove("is-none"); }
+  });
+  $("border-none").addEventListener("change", function () {
+    borderNone = $("border-none").checked;
+    $("border-row").classList.toggle("is-none", borderNone);
+  });
+  $("fill-none").addEventListener("change", function () {
+    fillNone = $("fill-none").checked;
+    $("fill-row").classList.toggle("is-none", fillNone);
+  });
 
   /* freehand + shapes */
   cv.addEventListener("pointerdown", function (e) {
@@ -269,7 +292,12 @@
       return;
     }
     if (e.button !== 0) return;
-    if (tool === "text") { e.preventDefault(); startText(e); return; }
+    if (tool === "text") { e.preventDefault(); if (!borderNone) startText(e); return; }
+
+    // nothing to draw when the colors it needs are set to "none"
+    if ((tool === "pencil" || tool === "line") && borderNone) return;
+    if ((tool === "rect" || tool === "ellipse") && borderNone && fillNone) return;
+
     cv.setPointerCapture(e.pointerId);
     var p = canvasPos(e);
     drawing = true;
@@ -323,10 +351,9 @@
   function drawShape(x0, y0, x1, y1) {
     ctx.lineWidth = sizePx();
     ctx.lineCap = "round";
-    ctx.strokeStyle = borderColor;
-    ctx.fillStyle = fillColor;
     ctx.beginPath();
     if (tool === "line") {
+      ctx.strokeStyle = borderColor;
       ctx.moveTo(x0, y0);
       ctx.lineTo(x1, y1);
       ctx.stroke();
@@ -337,8 +364,8 @@
     } else if (tool === "ellipse") {
       ctx.ellipse((x0 + x1) / 2, (y0 + y1) / 2, Math.abs(x1 - x0) / 2, Math.abs(y1 - y0) / 2, 0, 0, Math.PI * 2);
     }
-    ctx.fill();
-    ctx.stroke();
+    if (!fillNone) { ctx.fillStyle = fillColor; ctx.fill(); }
+    if (!borderNone) { ctx.strokeStyle = borderColor; ctx.stroke(); }
   }
 
   /* text tool: type directly on the canvas at the click point */
