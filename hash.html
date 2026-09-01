@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hash / Checksum — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>Hash / Checksum</h1>
+      <p>SHA hash of text or a file, with an optional expected-hash match check. All local.</p>
+    </div>
+
+    <div class="tool">
+      <div class="seg">
+        <button type="button" class="seg-btn is-active" data-mode="text">Text</button>
+        <button type="button" class="seg-btn" data-mode="file">File</button>
+      </div>
+
+      <div class="tool-row">
+        <span>Algorithm</span>
+        <select id="algo" class="tool-select">
+          <option value="SHA-256">SHA-256</option>
+          <option value="SHA-1">SHA-1</option>
+          <option value="SHA-384">SHA-384</option>
+          <option value="SHA-512">SHA-512</option>
+        </select>
+      </div>
+
+      <section id="text-mode">
+        <div class="tool-row">
+          <span>Input</span>
+          <textarea id="t-in" class="tool-area" rows="5" spellcheck="false" autocomplete="off"></textarea>
+        </div>
+      </section>
+
+      <section id="file-mode" hidden>
+        <div class="tool-row">
+          <span>File</span>
+          <input type="file" id="f-in" class="tool-input-file">
+        </div>
+      </section>
+
+      <div class="tool-row">
+        <span>Digest (hex)</span>
+        <textarea id="out" class="tool-area" rows="3" readonly spellcheck="false" placeholder="hash output"></textarea>
+      </div>
+      <div class="tool-actions">
+        <button type="button" id="copy" class="tool-btn sub">copy</button>
+      </div>
+
+      <div class="tool-row">
+        <span>Expected hash (optional)</span>
+        <input type="text" id="expect" class="tool-field" spellcheck="false" autocomplete="off" placeholder="paste a hash to compare">
+      </div>
+      <div id="msg" class="tool-msg"></div>
+
+      <p class="tool-note">Hashing runs in your browser with the Web Crypto API. Nothing is uploaded. MD5 is not offered because the platform doesn't provide it and it's unsafe for verification.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var TE = new TextEncoder();
+  var mode = "text";
+
+  function toHex(buf) {
+    var arr = new Uint8Array(buf), hex = "";
+    for (var i = 0; i < arr.length; i++) hex += arr[i].toString(16).padStart(2, "0");
+    return hex;
+  }
+
+  async function bytes() {
+    if (mode === "file") {
+      var f = $("f-in").files[0];
+      if (!f) return null;
+      return new Uint8Array(await f.arrayBuffer());
+    }
+    return TE.encode($("t-in").value);
+  }
+
+  async function run() {
+    $("msg").textContent = "";
+    var b = await bytes();
+    if (b === null || (mode === "text" && b.length === 0)) { $("out").value = ""; compare(); return; }
+    try {
+      var digest = await crypto.subtle.digest($("algo").value, b);
+      $("out").value = toHex(digest);
+    } catch (e) {
+      $("out").value = "";
+      $("msg").textContent = "Hash failed: " + (e && e.message ? e.message : e);
+    }
+    compare();
+  }
+
+  function compare() {
+    var got = $("out").value.trim().toLowerCase();
+    var want = $("expect").value.replace(/[^0-9a-fA-F]/g, "").toLowerCase();
+    if (!got || !want) { $("msg").textContent = ""; $("msg").className = "tool-msg"; return; }
+    if (got === want) {
+      $("msg").textContent = "✓ match";
+      $("msg").className = "tool-msg jwt-good";
+    } else {
+      $("msg").textContent = "✗ no match";
+      $("msg").className = "tool-msg jwt-bad";
+    }
+  }
+
+  $("t-in").addEventListener("input", run);
+  $("f-in").addEventListener("change", run);
+  $("algo").addEventListener("change", run);
+  $("expect").addEventListener("input", compare);
+
+  $("copy").addEventListener("click", function () {
+    var text = $("out").value;
+    if (!text) return;
+    var btn = this;
+    var done = function (ok) {
+      btn.textContent = ok ? "copied" : "Ctrl+C";
+      setTimeout(function () { btn.textContent = "copy"; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+    } else { done(false); }
+  });
+
+  var segs = document.querySelectorAll(".seg-btn");
+  segs.forEach(function (b) {
+    b.addEventListener("click", function () {
+      segs.forEach(function (x) { x.classList.toggle("is-active", x === b); });
+      mode = b.getAttribute("data-mode");
+      $("text-mode").hidden = mode !== "text";
+      $("file-mode").hidden = mode !== "file";
+      run();
+    });
+  });
+
+  run();
+})();
+</script>
+</body>
+</html>

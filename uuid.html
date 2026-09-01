@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UUID / ULID — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>UUID / ULID</h1>
+      <p>Bulk random identifiers from a CSPRNG. Nothing leaves the browser.</p>
+    </div>
+
+    <div class="tool">
+      <div class="tool-row">
+        <span>Type</span>
+        <select id="type" class="tool-select">
+          <option value="uuid">UUID v4</option>
+          <option value="ulid">ULID</option>
+        </select>
+      </div>
+      <div class="tool-row">
+        <span>Count</span>
+        <input type="number" id="count" class="tool-field" value="10" min="1" max="1000">
+      </div>
+      <label class="tool-check"><input type="checkbox" id="upper"> uppercase</label>
+      <label class="tool-check"><input type="checkbox" id="nodash"> strip dashes (UUID)</label>
+
+      <div class="tool-actions">
+        <button type="button" id="gen" class="tool-btn">Generate</button>
+        <button type="button" id="copy" class="tool-btn sub">copy</button>
+      </div>
+
+      <textarea id="out" class="tool-area" rows="12" readonly spellcheck="false"></textarea>
+      <div id="msg" class="tool-msg"></div>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var ENC = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"; // Crockford base32
+
+  function uuid4() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    var b = crypto.getRandomValues(new Uint8Array(16));
+    b[6] = (b[6] & 0x0f) | 0x40;
+    b[8] = (b[8] & 0x3f) | 0x80;
+    var h = [];
+    for (var i = 0; i < 16; i++) h.push(b[i].toString(16).padStart(2, "0"));
+    return h.slice(0, 4).join("") + "-" + h.slice(4, 6).join("") + "-" +
+           h.slice(6, 8).join("") + "-" + h.slice(8, 10).join("") + "-" + h.slice(10, 16).join("");
+  }
+
+  function ulidTime(now) {
+    var out = "";
+    for (var i = 0; i < 10; i++) { out = ENC[now % 32] + out; now = Math.floor(now / 32); }
+    return out;
+  }
+  function ulidRandom() {
+    var bytes = crypto.getRandomValues(new Uint8Array(10)); // 80 bits -> 16 chars
+    var bits = 0, val = 0, out = "";
+    for (var i = 0; i < bytes.length; i++) {
+      val = (val << 8) | bytes[i];
+      bits += 8;
+      while (bits >= 5) { bits -= 5; out += ENC[(val >>> bits) & 31]; }
+      val &= (1 << bits) - 1;
+    }
+    return out;
+  }
+  function ulid() { return ulidTime(Date.now()) + ulidRandom(); }
+
+  function generate() {
+    $("msg").textContent = "";
+    var n = Math.max(1, Math.min(1000, parseInt($("count").value, 10) || 1));
+    $("count").value = n;
+    var isUuid = $("type").value === "uuid";
+    var lines = [];
+    for (var i = 0; i < n; i++) {
+      var v = isUuid ? uuid4() : ulid();
+      if (isUuid && $("nodash").checked) v = v.replace(/-/g, "");
+      v = $("upper").checked ? v.toUpperCase() : (isUuid ? v.toLowerCase() : v);
+      lines.push(v);
+    }
+    $("out").value = lines.join("\n");
+    $("msg").textContent = n + (isUuid ? " UUID" : " ULID") + (n === 1 ? "" : "s") + " generated";
+  }
+
+  $("gen").addEventListener("click", generate);
+  $("type").addEventListener("change", generate);
+  $("upper").addEventListener("change", generate);
+  $("nodash").addEventListener("change", generate);
+
+  $("copy").addEventListener("click", function () {
+    var text = $("out").value;
+    if (!text) return;
+    var btn = this;
+    var done = function (ok) {
+      btn.textContent = ok ? "copied" : "Ctrl+C";
+      setTimeout(function () { btn.textContent = "copy"; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+    } else { done(false); }
+  });
+
+  generate();
+})();
+</script>
+</body>
+</html>
