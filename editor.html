@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text Editor — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap-wide">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>Text Editor</h1>
+      <p>A plain scratch pad. Open and save .txt, find and replace, autosaves to this browser.</p>
+    </div>
+
+    <div class="tool tool--wide">
+      <div class="tool-ops">
+        <button type="button" id="open-btn" class="tool-btn sub">open</button>
+        <input type="file" id="file" accept=".txt,.md,.csv,.json,.log,.ini,.yml,.yaml,text/*" hidden>
+        <button type="button" id="save-btn" class="tool-btn sub">save</button>
+        <button type="button" id="copy-btn" class="tool-btn sub">copy all</button>
+        <button type="button" id="clear-btn" class="tool-btn sub">clear</button>
+      </div>
+
+      <div class="tool-row">
+        <span>File name</span>
+        <input type="text" id="fname" class="tool-field" value="untitled.txt" spellcheck="false" autocomplete="off">
+      </div>
+      <label class="tool-check"><input type="checkbox" id="wrap" checked> word wrap</label>
+
+      <textarea id="ed" class="editor-area" spellcheck="false" autocomplete="off"></textarea>
+      <div class="tool-row" id="status"><span>Status</span></div>
+
+      <div class="tool-row">
+        <span>Find</span>
+        <input type="text" id="find" class="tool-field" spellcheck="false" autocomplete="off">
+      </div>
+      <div class="tool-row">
+        <span>Replace</span>
+        <input type="text" id="repl" class="tool-field" spellcheck="false" autocomplete="off">
+      </div>
+      <label class="tool-check"><input type="checkbox" id="cs"> case sensitive</label>
+      <div class="tool-ops">
+        <button type="button" id="find-next" class="tool-btn sub">find next</button>
+        <button type="button" id="replace-one" class="tool-btn sub">replace</button>
+        <button type="button" id="replace-all" class="tool-btn sub">replace all</button>
+      </div>
+      <div id="find-info" class="tool-msg"></div>
+
+      <p class="tool-note">Text is kept in this browser only (localStorage) and is never uploaded. Clearing site data will erase it.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var ed = $("ed");
+  var CKEY = "editor:content", NKEY = "editor:name";
+
+  try {
+    var c = localStorage.getItem(CKEY);
+    if (c !== null) ed.value = c;
+    var n = localStorage.getItem(NKEY);
+    if (n) $("fname").value = n;
+  } catch (e) {}
+
+  function persist() {
+    try {
+      localStorage.setItem(CKEY, ed.value);
+      localStorage.setItem(NKEY, $("fname").value);
+    } catch (e) {}
+  }
+
+  function stats() {
+    var v = ed.value;
+    var pos = ed.selectionStart;
+    var before = v.slice(0, pos);
+    var ln = before.split("\n").length;
+    var col = pos - before.lastIndexOf("\n");
+    var words = v.trim() ? v.trim().split(/\s+/).length : 0;
+    var lines = v === "" ? 0 : v.split("\n").length;
+    $("status").innerHTML = "<span>Status</span>Ln " + ln + ", Col " + col +
+      " &middot; " + v.length + " chars &middot; " + words + " words &middot; " + lines + " lines";
+  }
+
+  function refresh() { stats(); persist(); }
+
+  ed.addEventListener("input", refresh);
+  ed.addEventListener("keyup", stats);
+  ed.addEventListener("click", stats);
+  ed.addEventListener("select", stats);
+  $("fname").addEventListener("input", persist);
+
+  ed.addEventListener("keydown", function (e) {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      var s = ed.selectionStart, en = ed.selectionEnd;
+      ed.setRangeText("\t", s, en, "end");
+      refresh();
+    }
+  });
+
+  /* open */
+  $("open-btn").addEventListener("click", function () { $("file").click(); });
+  $("file").addEventListener("change", function () {
+    var f = $("file").files[0];
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function () { ed.value = r.result; $("fname").value = f.name; refresh(); };
+    r.readAsText(f);
+    $("file").value = "";
+  });
+
+  /* save */
+  $("save-btn").addEventListener("click", function () {
+    var name = $("fname").value.trim() || "untitled.txt";
+    var blob = new Blob([ed.value], { type: "text/plain;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  });
+
+  /* copy */
+  $("copy-btn").addEventListener("click", function () {
+    var btn = this;
+    var done = function (ok) {
+      btn.textContent = ok ? "copied" : "Ctrl+C";
+      setTimeout(function () { btn.textContent = "copy all"; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(ed.value).then(function () { done(true); }, function () { done(false); });
+    } else { done(false); }
+  });
+
+  /* clear */
+  $("clear-btn").addEventListener("click", function () {
+    if (ed.value && !window.confirm("Clear all text?")) return;
+    ed.value = "";
+    refresh();
+    ed.focus();
+  });
+
+  /* word wrap */
+  $("wrap").addEventListener("change", function () {
+    var on = $("wrap").checked;
+    ed.classList.toggle("nowrap", !on);
+    ed.setAttribute("wrap", on ? "soft" : "off");
+  });
+
+  /* find & replace */
+  function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+  function scan() {
+    var n = $("find").value;
+    if (!n) return { n: n, matches: 0 };
+    var cs = $("cs").checked;
+    var hay = cs ? ed.value : ed.value.toLowerCase();
+    var needle = cs ? n : n.toLowerCase();
+    var count = 0, i = hay.indexOf(needle);
+    while (i !== -1) { count++; i = hay.indexOf(needle, i + Math.max(1, needle.length)); }
+    return { n: n, cs: cs, hay: hay, needle: needle, matches: count };
+  }
+
+  function findNext() {
+    var x = scan();
+    if (!x.n) { $("find-info").textContent = ""; return; }
+    if (x.matches === 0) { $("find-info").textContent = "no matches"; return; }
+    var start = ed.selectionEnd;
+    var idx = x.hay.indexOf(x.needle, start);
+    if (idx === -1) idx = x.hay.indexOf(x.needle, 0);
+    ed.focus();
+    ed.setSelectionRange(idx, idx + x.n.length);
+    $("find-info").textContent = x.matches + (x.matches === 1 ? " match" : " matches");
+    stats();
+  }
+
+  function replaceOne() {
+    var x = scan();
+    if (!x.n) return;
+    var s = ed.selectionStart, e = ed.selectionEnd;
+    var sel = ed.value.slice(s, e);
+    var hit = x.cs ? sel === x.n : sel.toLowerCase() === x.needle;
+    if (hit) {
+      ed.setRangeText($("repl").value, s, e, "end");
+      refresh();
+    }
+    findNext();
+  }
+
+  function replaceAll() {
+    var x = scan();
+    if (!x.n) return;
+    var repl = $("repl").value;
+    var re = new RegExp(escapeRe(x.n), x.cs ? "g" : "gi");
+    var count = x.matches;
+    ed.value = ed.value.replace(re, function () { return repl; });
+    refresh();
+    $("find-info").textContent = "replaced " + count;
+  }
+
+  $("find-next").addEventListener("click", findNext);
+  $("replace-one").addEventListener("click", replaceOne);
+  $("replace-all").addEventListener("click", replaceAll);
+  $("find").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); findNext(); }
+  });
+
+  stats();
+})();
+</script>
+</body>
+</html>

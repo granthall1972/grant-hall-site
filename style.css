@@ -427,6 +427,23 @@ html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
   margin-bottom: 16px;
 }
 .rx-hl mark { background: var(--accent); color: var(--bg); }
+.tool--wide { max-width: 100%; }
+.editor-area {
+  display: block;
+  width: 100%;
+  min-height: 55vh;
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  resize: vertical;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-bottom: 8px;
+}
+.editor-area.nowrap { white-space: pre; overflow-wrap: normal; overflow-x: auto; }
 .xfer-btn {
   font: inherit;
   font-size: 13px;
