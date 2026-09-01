@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paint — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap-wide">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>Paint</h1>
+      <p>Pencil, shapes, text, and an image to draw on top of. Runs in the browser.</p>
+    </div>
+
+    <div class="tool tool--wide">
+      <div class="seg" id="tools">
+        <button type="button" class="seg-btn is-active" data-tool="pencil">Pencil</button>
+        <button type="button" class="seg-btn" data-tool="eraser">Eraser</button>
+        <button type="button" class="seg-btn" data-tool="line">Line</button>
+        <button type="button" class="seg-btn" data-tool="rect">Rectangle</button>
+        <button type="button" class="seg-btn" data-tool="ellipse">Ellipse</button>
+        <button type="button" class="seg-btn" data-tool="text">Text</button>
+      </div>
+
+      <div class="tool-ops">
+        <span class="tool-hint" id="size-label">Brush size</span>
+        <input type="range" id="size" class="tool-range paint-size" min="1" max="50" value="4">
+        <label class="tool-check"><input type="checkbox" id="filled"> filled shapes</label>
+      </div>
+
+      <div class="tool-ops" id="palette"></div>
+
+      <div class="tool-ops">
+        <span class="tool-hint">Color</span>
+        <input type="color" id="color" class="paint-color" value="#111111">
+        <button type="button" id="open-btn" class="tool-btn sub">open image</button>
+        <input type="file" id="file" accept="image/*" hidden>
+        <button type="button" id="undo-btn" class="tool-btn sub">undo</button>
+        <button type="button" id="clear-btn" class="tool-btn sub">clear</button>
+      </div>
+
+      <div class="paint-canvas-wrap" id="cv-wrap">
+        <canvas id="cv" width="900" height="520"></canvas>
+      </div>
+
+      <div class="tool-row">
+        <span>File name</span>
+        <input type="text" id="fname" class="tool-field" value="drawing.png" spellcheck="false" autocomplete="off">
+      </div>
+      <div class="tool-actions">
+        <button type="button" id="save-btn" class="tool-btn">Save PNG</button>
+      </div>
+
+      <p class="tool-note">Everything happens on this canvas in your browser. Nothing is uploaded. Opening an image loads it onto the canvas as a flat background; there are no layers.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var cv = $("cv"), ctx = cv.getContext("2d"), wrap = $("cv-wrap");
+
+  var tool = "pencil", color = "#111111", size = 4, filled = false;
+  var drawing = false, startX = 0, startY = 0, preShape = null;
+  var undoStack = [];
+
+  function resetCanvas(w, h) {
+    cv.width = w; cv.height = h;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+    undoStack = [];
+  }
+  resetCanvas(900, 520);
+
+  function pushUndo() {
+    undoStack.push(ctx.getImageData(0, 0, cv.width, cv.height));
+    if (undoStack.length > 20) undoStack.shift();
+  }
+  function undo() {
+    if (!undoStack.length) return;
+    ctx.putImageData(undoStack.pop(), 0, 0);
+  }
+
+  function canvasPos(e) {
+    var r = cv.getBoundingClientRect();
+    var sx = cv.width / r.width, sy = cv.height / r.height;
+    return { x: (e.clientX - r.left) * sx, y: (e.clientY - r.top) * sy };
+  }
+
+  /* tool select */
+  var toolBtns = document.querySelectorAll("#tools .seg-btn");
+  toolBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      toolBtns.forEach(function (x) { x.classList.toggle("is-active", x === b); });
+      tool = b.getAttribute("data-tool");
+      $("size-label").textContent = tool === "text" ? "Font size" : "Brush size";
+      hideTextInput();
+    });
+  });
+
+  $("size").addEventListener("input", function () { size = parseInt($("size").value, 10) || 1; });
+  $("filled").addEventListener("change", function () { filled = $("filled").checked; });
+  $("color").addEventListener("input", function () { color = $("color").value; setActiveSwatch(null); });
+
+  /* palette (colors are defined in style.css by swatch order) */
+  var PALETTE = ["#000000", "#ffffff", "#808080", "#c0c0c0", "#e53935", "#fb8c00", "#fdd835", "#43a047",
+                 "#00acc1", "#1e88e5", "#3949ab", "#8e24aa", "#d81b60", "#6d4c41", "#f5f5f5", "#004d40"];
+  var paletteBox = $("palette");
+  PALETTE.forEach(function (c) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "pal-sw";
+    b.title = c;
+    b.addEventListener("click", function () {
+      color = c;
+      $("color").value = c;
+      setActiveSwatch(b);
+    });
+    paletteBox.appendChild(b);
+  });
+  function setActiveSwatch(el) {
+    paletteBox.querySelectorAll(".pal-sw").forEach(function (x) { x.classList.toggle("is-active", x === el); });
+  }
+
+  /* drawing */
+  cv.addEventListener("pointerdown", function (e) {
+    if (tool === "text") { showTextInput(e); return; }
+    cv.setPointerCapture(e.pointerId);
+    var p = canvasPos(e);
+    drawing = true;
+    startX = p.x; startY = p.y;
+    pushUndo();
+    if (tool === "pencil" || tool === "eraser") {
+      ctx.strokeStyle = tool === "eraser" ? "#ffffff" : color;
+      ctx.lineWidth = size;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    } else {
+      preShape = ctx.getImageData(0, 0, cv.width, cv.height);
+    }
+  });
+
+  cv.addEventListener("pointermove", function (e) {
+    if (!drawing) return;
+    var p = canvasPos(e);
+    if (tool === "pencil" || tool === "eraser") {
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    } else if (preShape) {
+      ctx.putImageData(preShape, 0, 0);
+      drawShape(startX, startY, p.x, p.y);
+    }
+  });
+
+  function endDraw(e) {
+    if (!drawing) return;
+    drawing = false;
+    if (preShape) {
+      var p = canvasPos(e);
+      ctx.putImageData(preShape, 0, 0);
+      drawShape(startX, startY, p.x, p.y);
+      preShape = null;
+    }
+  }
+  cv.addEventListener("pointerup", endDraw);
+  cv.addEventListener("pointercancel", endDraw);
+
+  function drawShape(x0, y0, x1, y1) {
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = size;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    if (tool === "line") {
+      ctx.moveTo(x0, y0);
+      ctx.lineTo(x1, y1);
+      ctx.stroke();
+    } else if (tool === "rect") {
+      var w = x1 - x0, h = y1 - y0;
+      if (filled) ctx.fillRect(x0, y0, w, h); else ctx.strokeRect(x0, y0, w, h);
+    } else if (tool === "ellipse") {
+      var cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, rx = Math.abs(x1 - x0) / 2, ry = Math.abs(y1 - y0) / 2;
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      if (filled) ctx.fill(); else ctx.stroke();
+    }
+  }
+
+  /* text tool */
+  var textInput = null;
+  function showTextInput(e) {
+    hideTextInput();
+    var cp = canvasPos(e);
+    var wrapRect = wrap.getBoundingClientRect();
+    var fpx = Math.max(12, size * 4);
+
+    textInput = document.createElement("input");
+    textInput.type = "text";
+    textInput.className = "paint-text-input";
+    textInput.style.left = (e.clientX - wrapRect.left) + "px";
+    textInput.style.top = (e.clientY - wrapRect.top) + "px";
+    textInput.style.color = color;
+    textInput.style.fontSize = fpx + "px";
+    wrap.appendChild(textInput);
+    textInput.focus();
+
+    var done = false;
+    function commit() {
+      if (done) return;
+      done = true;
+      if (textInput.value) {
+        pushUndo();
+        ctx.fillStyle = color;
+        ctx.font = fpx + "px sans-serif";
+        ctx.textBaseline = "top";
+        ctx.fillText(textInput.value, cp.x, cp.y);
+      }
+      hideTextInput();
+    }
+    textInput.addEventListener("keydown", function (ev) {
+      if (ev.key === "Enter") { ev.preventDefault(); commit(); }
+      if (ev.key === "Escape") { ev.preventDefault(); done = true; hideTextInput(); }
+    });
+    textInput.addEventListener("blur", commit);
+  }
+  function hideTextInput() {
+    if (textInput) { textInput.remove(); textInput = null; }
+  }
+
+  /* open image */
+  $("open-btn").addEventListener("click", function () { $("file").click(); });
+  $("file").addEventListener("change", function () {
+    var f = $("file").files[0];
+    if (!f) return;
+    var img = new Image();
+    img.onload = function () {
+      var w = Math.min(img.naturalWidth, 2000) || 900;
+      var h = Math.min(img.naturalHeight, 2000) || 520;
+      resetCanvas(w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(img.src);
+    };
+    img.src = URL.createObjectURL(f);
+    $("file").value = "";
+  });
+
+  /* undo / clear */
+  $("undo-btn").addEventListener("click", undo);
+  $("clear-btn").addEventListener("click", function () {
+    if (!window.confirm("Clear the canvas?")) return;
+    pushUndo();
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, cv.width, cv.height);
+  });
+  document.addEventListener("keydown", function (e) {
+    var tag = document.activeElement && document.activeElement.tagName;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && tag !== "INPUT") {
+      e.preventDefault();
+      undo();
+    }
+  });
+
+  /* save */
+  $("save-btn").addEventListener("click", function () {
+    var name = $("fname").value.trim() || "drawing.png";
+    cv.toBlob(function (blob) {
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    });
+  });
+})();
+</script>
+</body>
+</html>
