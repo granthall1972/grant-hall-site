@@ -63,6 +63,9 @@
             <button type="button" class="paint-tool" data-tool="text" title="Text" aria-label="Text">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2"></path><path d="M12 5v14"></path><path d="M9 19h6"></path></svg>
             </button>
+            <button type="button" class="paint-tool" data-tool="zoom" title="Magnifier — click to zoom in, Alt+click or right-click to zoom out" aria-label="Magnifier">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"></circle><line x1="21" y1="21" x2="15.8" y2="15.8"></line><line x1="10.5" y1="7.7" x2="10.5" y2="13.3"></line><line x1="7.7" y1="10.5" x2="13.3" y2="10.5"></line></svg>
+            </button>
           </div>
 
           <div class="paint-group">
@@ -90,6 +93,7 @@
           </div>
 
           <div class="paint-actions">
+            <button type="button" id="zoom-reset" class="tool-btn sub">zoom 100%</button>
             <button type="button" id="open-btn" class="tool-btn sub">open image</button>
             <input type="file" id="file" accept="image/*" hidden>
             <button type="button" id="undo-btn" class="tool-btn sub">undo</button>
@@ -108,7 +112,7 @@
         <button type="button" id="save-btn" class="tool-btn">Save PNG</button>
       </div>
 
-      <p class="tool-note">Everything happens on this canvas in your browser. Nothing is uploaded. Opening an image loads it onto the canvas as a flat background; there are no layers. Text tool: pick it, click where you want the text, and type. Click away to place it, Escape to cancel.</p>
+      <p class="tool-note">Everything happens on this canvas in your browser. Nothing is uploaded. Opening an image loads it onto the canvas as a flat background; there are no layers. Text tool: pick it, click where you want the text, and type. Click away to place it, Escape to cancel. Zoom: scroll wheel over the canvas, or the magnifier (click to zoom in, Alt+click or right-click to zoom out). Middle-drag to pan, "zoom" button to fit.</p>
     </div>
   </div>
 </main>
@@ -164,6 +168,64 @@
     };
   }
 
+  /* zoom + pan */
+  var view = 1, MIN_VIEW = 0.05, MAX_VIEW = 32;
+
+  function updateZoomLabel() { $("zoom-reset").textContent = "zoom " + Math.round(view * 100) + "%"; }
+
+  function applyView(v, focalX, focalY) {
+    v = Math.max(MIN_VIEW, Math.min(MAX_VIEW, v));
+    var r = cv.getBoundingClientRect();
+    var wr = wrap.getBoundingClientRect();
+    var hasFocal = typeof focalX === "number";
+    var fx = hasFocal ? focalX : wr.left + wrap.clientWidth / 2;
+    var fy = hasFocal ? focalY : wr.top + wrap.clientHeight / 2;
+    var cx = r.width ? (fx - r.left) / r.width * cv.width : cv.width / 2;
+    var cy = r.height ? (fy - r.top) / r.height * cv.height : cv.height / 2;
+    cx = Math.max(0, Math.min(cv.width, cx));
+    cy = Math.max(0, Math.min(cv.height, cy));
+    view = v;
+    cv.style.width = (cv.width * view) + "px";
+    cv.style.height = (cv.height * view) + "px";
+    wrap.scrollLeft = cx * view - (fx - wr.left);
+    wrap.scrollTop = cy * view - (fy - wr.top);
+    updateZoomLabel();
+  }
+
+  function fitView() {
+    var w = wrap.clientWidth || cv.width;
+    var h = (window.innerHeight || 800) * 0.72;
+    applyView(Math.min(w / cv.width, h / cv.height, 1));
+  }
+
+  wrap.addEventListener("wheel", function (e) {
+    e.preventDefault();
+    killText(true);
+    var dy = e.deltaY * (e.deltaMode === 1 ? 16 : 1);
+    applyView(view * Math.pow(1.0015, -dy), e.clientX, e.clientY);
+  }, { passive: false });
+
+  var panning = false, panX = 0, panY = 0, panSL = 0, panST = 0;
+  wrap.addEventListener("pointerdown", function (e) {
+    if (e.button !== 1) return;
+    e.preventDefault();
+    panning = true;
+    panX = e.clientX; panY = e.clientY;
+    panSL = wrap.scrollLeft; panST = wrap.scrollTop;
+    wrap.style.cursor = "grabbing";
+    wrap.setPointerCapture(e.pointerId);
+  });
+  wrap.addEventListener("pointermove", function (e) {
+    if (!panning) return;
+    wrap.scrollLeft = panSL - (e.clientX - panX);
+    wrap.scrollTop = panST - (e.clientY - panY);
+  });
+  wrap.addEventListener("pointerup", function (e) {
+    if (e.button === 1) { panning = false; wrap.style.cursor = ""; }
+  });
+  cv.addEventListener("contextmenu", function (e) { if (tool === "zoom") e.preventDefault(); });
+  $("zoom-reset").addEventListener("click", fitView);
+
   /* tools */
   var toolBtns = document.querySelectorAll("#tools .paint-tool");
   toolBtns.forEach(function (b) {
@@ -171,14 +233,25 @@
       killText(true);
       toolBtns.forEach(function (x) { x.classList.toggle("is-active", x === b); });
       tool = b.getAttribute("data-tool");
+      cv.style.cursor = tool === "zoom" ? "zoom-in" : "";
     });
   });
+  document.addEventListener("keydown", function (e) { if (e.key === "Alt" && tool === "zoom") cv.style.cursor = "zoom-out"; });
+  document.addEventListener("keyup", function (e) { if (e.key === "Alt" && tool === "zoom") cv.style.cursor = "zoom-in"; });
 
   $("border").addEventListener("input", function () { borderColor = $("border").value; });
   $("fill").addEventListener("input", function () { fillColor = $("fill").value; });
 
   /* freehand + shapes */
   cv.addEventListener("pointerdown", function (e) {
+    if (e.button === 1) return;
+    if (tool === "zoom") {
+      e.preventDefault();
+      var out = e.altKey || e.button === 2;
+      applyView(out ? view / 2 : view * 2, e.clientX, e.clientY);
+      return;
+    }
+    if (e.button !== 0) return;
     if (tool === "text") { e.preventDefault(); startText(e); return; }
     cv.setPointerCapture(e.pointerId);
     var p = canvasPos(e);
@@ -334,6 +407,7 @@
       var h = Math.min(img.naturalHeight, 2000) || 560;
       resetCanvas(w, h);
       ctx.drawImage(img, 0, 0, w, h);
+      fitView();
       URL.revokeObjectURL(img.src);
     };
     img.src = URL.createObjectURL(f);
@@ -351,11 +425,10 @@
   });
   document.addEventListener("keydown", function (e) {
     var tag = document.activeElement && document.activeElement.tagName;
-    if (!textBox && tag !== "INPUT" && tag !== "SELECT" && tag !== "TEXTAREA" &&
-        (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
-      e.preventDefault();
-      undo();
-    }
+    var typing = textBox || tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA";
+    if (typing) return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); }
+    else if ((e.ctrlKey || e.metaKey) && e.key === "0") { e.preventDefault(); fitView(); }
   });
 
   /* save */
@@ -371,6 +444,8 @@
       setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
     });
   });
+
+  fitView();
 })();
 </script>
 </body>

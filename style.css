@@ -494,11 +494,15 @@ html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
 .paint-actions { display: flex; flex-direction: column; gap: 8px; }
 .paint-actions .tool-btn { width: 100%; margin: 0; }
 
-.paint-canvas-wrap { position: relative; flex: 1 1 auto; min-width: 0; }
+.paint-canvas-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: auto;
+  max-height: 78vh;
+}
 .paint-canvas-wrap canvas {
   display: block;
-  max-width: 100%;
-  height: auto;
   background: #fff;
   border: 1px solid var(--border);
   touch-action: none;
