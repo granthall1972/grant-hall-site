@@ -499,14 +499,12 @@ html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
   position: relative;
   flex: 1 1 auto;
   min-width: 0;
-  height: 70vh;
   min-height: 320px;
   overflow: auto;
-  display: grid;
   background: var(--bg);
 }
 .paint-canvas-wrap canvas {
-  margin: auto;
+  display: block;
   background: #fff;
   border: 1px solid var(--border);
   touch-action: none;

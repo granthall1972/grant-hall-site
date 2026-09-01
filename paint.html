@@ -168,10 +168,22 @@
   }
 
   /* zoom + pan */
-  var view = 1, MIN_VIEW = 0.05, MAX_VIEW = 32;
+  var view = 1, fitScale = 1;
+
+  // The frame is a fixed box locked to the canvas aspect ratio. At fitScale the
+  // canvas exactly fills it (no scrollbars); zooming in overflows it immediately.
+  function layoutFrame() {
+    var fw = wrap.clientWidth || cv.width;
+    var fh = fw * cv.height / cv.width;
+    var cap = (window.innerHeight || 800) * 0.82;
+    if (fh > cap) fh = cap;
+    wrap.style.height = fh + "px";
+    fitScale = Math.min(wrap.clientWidth / cv.width, wrap.clientHeight / cv.height) || 1;
+    applyView(view < fitScale ? fitScale : view);
+  }
 
   function applyView(v, focalX, focalY) {
-    v = Math.max(MIN_VIEW, Math.min(MAX_VIEW, v));
+    v = Math.max(fitScale, Math.min(fitScale * 24, v));
     var r = cv.getBoundingClientRect();
     var wr = wrap.getBoundingClientRect();
     var hasFocal = typeof focalX === "number";
@@ -193,11 +205,8 @@
     wrap.scrollTop += (r2.top + cy / cv.height * r2.height) - fy;
   }
 
-  function fitView() {
-    var w = wrap.clientWidth || cv.width;
-    var h = wrap.clientHeight || cv.height;
-    applyView(Math.min(w / cv.width, h / cv.height, 1));
-  }
+  function fitView() { applyView(fitScale); }
+  window.addEventListener("resize", layoutFrame);
 
   wrap.addEventListener("wheel", function (e) {
     e.preventDefault();
@@ -415,7 +424,8 @@
       var h = Math.min(img.naturalHeight, 2000) || 560;
       resetCanvas(w, h);
       ctx.drawImage(img, 0, 0, w, h);
-      fitView();
+      view = 0;
+      layoutFrame();
       URL.revokeObjectURL(img.src);
     };
     img.src = URL.createObjectURL(f);
@@ -453,7 +463,8 @@
     });
   });
 
-  fitView();
+  view = 0;
+  layoutFrame();
 })();
 </script>
 </body>
