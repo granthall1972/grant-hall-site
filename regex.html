@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Regex Tester — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>Regex Tester</h1>
+      <p>Live match highlighting, capture groups, and replace. Runs in the browser.</p>
+    </div>
+
+    <div class="tool">
+      <div class="tool-row">
+        <span>Pattern</span>
+        <input type="text" id="pat" class="tool-field" spellcheck="false" autocomplete="off" placeholder="\b\w+@\w+\.\w+\b">
+      </div>
+      <div class="tool-row">
+        <span>Flags</span>
+        <input type="text" id="flags" class="tool-field tool-num" value="gim" spellcheck="false" autocomplete="off" placeholder="gimsuy">
+      </div>
+      <div class="tool-row">
+        <span>Test string</span>
+        <textarea id="str" class="tool-area" rows="6" spellcheck="false" autocomplete="off"></textarea>
+      </div>
+
+      <div id="msg" class="tool-msg"></div>
+
+      <div class="tool-row"><span>Highlighted</span></div>
+      <div class="rx-hl" id="hl"></div>
+
+      <div class="tool-row" id="count"><span>Matches</span>&mdash;</div>
+      <div class="jwt-claims" id="matches"></div>
+
+      <div class="tool-row">
+        <span>Replace with ($1, $&lt;name&gt;, $&amp; supported)</span>
+        <input type="text" id="rep" class="tool-field" spellcheck="false" autocomplete="off">
+      </div>
+      <div class="tool-row">
+        <span>Result</span>
+        <textarea id="repout" class="tool-area" rows="4" readonly spellcheck="false"></textarea>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  function esc(s) {
+    return s.replace(/[&<>]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]; });
+  }
+
+  function render() {
+    $("msg").textContent = "";
+    $("msg").className = "tool-msg";
+    var pat = $("pat").value;
+    var flags = $("flags").value;
+    var str = $("str").value;
+
+    if (!pat) { $("hl").textContent = str; $("matches").innerHTML = ""; $("count").innerHTML = "<span>Matches</span>&mdash;"; $("repout").value = ""; return; }
+
+    var re, reG;
+    try {
+      re = new RegExp(pat, flags);
+      reG = new RegExp(pat, flags.indexOf("g") === -1 ? flags + "g" : flags);
+    } catch (e) {
+      $("msg").textContent = "Invalid regex: " + (e && e.message ? e.message : e);
+      $("msg").className = "tool-msg jwt-bad";
+      $("hl").textContent = str;
+      $("matches").innerHTML = "";
+      $("repout").value = "";
+      return;
+    }
+
+    var out = "", last = 0, m, list = [], guard = 0;
+    while ((m = reG.exec(str)) !== null) {
+      out += esc(str.slice(last, m.index)) + "<mark>" + esc(m[0]) + "</mark>";
+      last = m.index + m[0].length;
+      list.push(m);
+      if (m[0] === "") reG.lastIndex++;
+      if (++guard > 100000) break;
+    }
+    out += esc(str.slice(last));
+    $("hl").innerHTML = out || "&nbsp;";
+
+    $("count").innerHTML = "<span>Matches</span>" + list.length + (guard > 100000 ? " (capped)" : "");
+    var shown = flags.indexOf("g") === -1 ? list.slice(0, 1) : list;
+    $("matches").innerHTML = shown.map(function (mm, i) {
+      var parts = "<div><b>#" + (i + 1) + "</b> &nbsp; [" + mm.index + "–" + (mm.index + mm[0].length) + "] &nbsp; " + esc(JSON.stringify(mm[0]));
+      for (var g = 1; g < mm.length; g++) parts += "<br>&nbsp;&nbsp;$" + g + " = " + (mm[g] === undefined ? "∅" : esc(JSON.stringify(mm[g])));
+      if (mm.groups) Object.keys(mm.groups).forEach(function (k) {
+        parts += "<br>&nbsp;&nbsp;$&lt;" + esc(k) + "&gt; = " + (mm.groups[k] === undefined ? "∅" : esc(JSON.stringify(mm.groups[k])));
+      });
+      return parts + "</div>";
+    }).join("") || "<div>no matches</div>";
+
+    try { $("repout").value = str.replace(re, $("rep").value); }
+    catch (e) { $("repout").value = "replace error: " + (e && e.message ? e.message : e); }
+  }
+
+  ["pat", "flags", "str", "rep"].forEach(function (id) {
+    $(id).addEventListener("input", render);
+  });
+
+  $("str").value = "Contact a@b.com or c@d.org — not this.";
+  render();
+})();
+</script>
+</body>
+</html>

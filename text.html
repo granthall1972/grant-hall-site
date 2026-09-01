@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Text Utilities — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>Text Utilities</h1>
+      <p>Case convert, slugify, line ops, counts. Runs in the browser.</p>
+    </div>
+
+    <div class="tool">
+      <div class="tool-row">
+        <span>Input</span>
+        <textarea id="in" class="tool-area" rows="7" spellcheck="false" autocomplete="off"></textarea>
+      </div>
+
+      <div class="tool-row" id="stats"><span>Counts</span>&mdash;</div>
+
+      <div class="tool-row"><span>Case</span></div>
+      <div class="tool-ops" data-group="case"></div>
+
+      <div class="tool-row"><span>Lines</span></div>
+      <div class="tool-ops" data-group="lines"></div>
+
+      <div class="tool-row"><span>Other</span></div>
+      <div class="tool-ops" data-group="other"></div>
+
+      <div class="tool-row">
+        <span>Output</span>
+        <textarea id="out" class="tool-area" rows="7" readonly spellcheck="false"></textarea>
+      </div>
+      <div class="tool-actions">
+        <button type="button" id="copy" class="tool-btn sub">copy</button>
+        <button type="button" id="use" class="tool-btn sub">output &rarr; input</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  function words(s) {
+    return s.replace(/([a-z0-9])([A-Z])/g, "$1 $2").split(/[^A-Za-z0-9]+/).filter(Boolean);
+  }
+  function deburr(s) {
+    return s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "");
+  }
+  function lines(s) { return s.split("\n"); }
+
+  var OPS = {
+    case: {
+      "UPPER": function (s) { return s.toUpperCase(); },
+      "lower": function (s) { return s.toLowerCase(); },
+      "Title Case": function (s) { return s.replace(/\w\S*/g, function (t) { return t[0].toUpperCase() + t.slice(1).toLowerCase(); }); },
+      "Sentence case": function (s) { return s.toLowerCase().replace(/(^\s*\w|[.!?]\s+\w)/g, function (m) { return m.toUpperCase(); }); },
+      "camelCase": function (s) { return words(s).map(function (w, i) { w = w.toLowerCase(); return i ? w[0].toUpperCase() + w.slice(1) : w; }).join(""); },
+      "PascalCase": function (s) { return words(s).map(function (w) { w = w.toLowerCase(); return w[0].toUpperCase() + w.slice(1); }).join(""); },
+      "snake_case": function (s) { return words(s).map(function (w) { return w.toLowerCase(); }).join("_"); },
+      "kebab-case": function (s) { return words(s).map(function (w) { return w.toLowerCase(); }).join("-"); },
+      "slugify": function (s) { return deburr(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, ""); }
+    },
+    lines: {
+      "sort A→Z": function (s) { return lines(s).sort(function (a, b) { return a.localeCompare(b); }).join("\n"); },
+      "sort Z→A": function (s) { return lines(s).sort(function (a, b) { return b.localeCompare(a); }).join("\n"); },
+      "dedupe": function (s) { var seen = {}; return lines(s).filter(function (l) { return seen[l] ? false : (seen[l] = true); }).join("\n"); },
+      "reverse": function (s) { return lines(s).reverse().join("\n"); },
+      "shuffle": function (s) { var a = lines(s); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a.join("\n"); },
+      "trim each": function (s) { return lines(s).map(function (l) { return l.trim(); }).join("\n"); },
+      "drop blank": function (s) { return lines(s).filter(function (l) { return l.trim() !== ""; }).join("\n"); },
+      "number": function (s) { return lines(s).map(function (l, i) { return (i + 1) + ". " + l; }).join("\n"); }
+    },
+    other: {
+      "reverse chars": function (s) { return s.split("").reverse().join(""); },
+      "collapse spaces": function (s) { return s.replace(/[^\S\n]+/g, " ").replace(/ *\n */g, "\n"); },
+      "strip accents": function (s) { return deburr(s); },
+      "remove punctuation": function (s) { return s.replace(/[^\w\s]|_/g, ""); },
+      "escape HTML": function (s) { return s.replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); },
+      "JSON string": function (s) { return JSON.stringify(s); }
+    }
+  };
+
+  function refreshStats() {
+    var v = $("in").value;
+    var w = v.trim() ? v.trim().split(/\s+/).length : 0;
+    var ln = v === "" ? 0 : v.split("\n").length;
+    var bytes = new TextEncoder().encode(v).length;
+    $("stats").innerHTML = "<span>Counts</span>" +
+      v.length + " chars &middot; " + w + " words &middot; " + ln + " lines &middot; " + bytes + " bytes";
+  }
+
+  function apply(fn) {
+    try { $("out").value = fn($("in").value); }
+    catch (e) { $("out").value = "error: " + (e && e.message ? e.message : e); }
+  }
+
+  Object.keys(OPS).forEach(function (group) {
+    var box = document.querySelector('.tool-ops[data-group="' + group + '"]');
+    Object.keys(OPS[group]).forEach(function (name) {
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "tool-btn sub";
+      b.textContent = name;
+      b.addEventListener("click", function () { apply(OPS[group][name]); });
+      box.appendChild(b);
+    });
+  });
+
+  $("in").addEventListener("input", refreshStats);
+  $("use").addEventListener("click", function () {
+    if (!$("out").value) return;
+    $("in").value = $("out").value;
+    refreshStats();
+  });
+  $("copy").addEventListener("click", function () {
+    var text = $("out").value;
+    if (!text) return;
+    var btn = this;
+    var done = function (ok) {
+      btn.textContent = ok ? "copied" : "Ctrl+C";
+      setTimeout(function () { btn.textContent = "copy"; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+    } else { done(false); }
+  });
+
+  refreshStats();
+})();
+</script>
+</body>
+</html>

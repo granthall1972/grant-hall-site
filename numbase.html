@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Number Base — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>Number Base</h1>
+      <p>Bin / oct / dec / hex, two's complement, shifts and bitwise ops. Runs in the browser.</p>
+    </div>
+
+    <div class="tool">
+      <div class="tool-row">
+        <span>Width</span>
+        <select id="width" class="tool-select">
+          <option value="8">8-bit</option>
+          <option value="16">16-bit</option>
+          <option value="32" selected>32-bit</option>
+          <option value="64">64-bit</option>
+        </select>
+      </div>
+
+      <div class="tool-row">
+        <span>Decimal</span>
+        <input type="text" id="dec" class="tool-field" data-base="10" spellcheck="false" autocomplete="off" placeholder="signed or unsigned, e.g. -42">
+      </div>
+      <div class="tool-row">
+        <span>Hex</span>
+        <input type="text" id="hex" class="tool-field" data-base="16" spellcheck="false" autocomplete="off" placeholder="1a2b">
+      </div>
+      <div class="tool-row">
+        <span>Octal</span>
+        <input type="text" id="oct" class="tool-field" data-base="8" spellcheck="false" autocomplete="off" placeholder="777">
+      </div>
+      <div class="tool-row">
+        <span>Binary</span>
+        <input type="text" id="bin" class="tool-field" data-base="2" spellcheck="false" autocomplete="off" placeholder="1011">
+      </div>
+
+      <div id="msg" class="tool-msg"></div>
+      <div class="jwt-claims" id="out"></div>
+
+      <div class="tool-row"><span>Transform current value</span></div>
+      <div class="tool-ops">
+        <button type="button" class="tool-btn sub" data-op="not">~ NOT</button>
+        <button type="button" class="tool-btn sub" data-op="shl">&lt;&lt; left</button>
+        <button type="button" class="tool-btn sub" data-op="shr">&gt;&gt; right</button>
+        <input type="number" id="shiftamt" class="tool-field tool-num" value="1" min="1" max="64">
+      </div>
+
+      <div class="tool-row">
+        <span>Second operand (0x / 0o / 0b / decimal)</span>
+        <input type="text" id="opb" class="tool-field" spellcheck="false" autocomplete="off" placeholder="0xff">
+      </div>
+      <div class="jwt-claims" id="outb"></div>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var current = 0n;
+
+  function width() { return BigInt(parseInt($("width").value, 10)); }
+  function mask() { return (1n << width()) - 1n; }
+  function wrap(v) { return v & mask(); }              // two's-complement wrap into width
+  function signed(u) { return (u >> (width() - 1n)) ? u - (1n << width()) : u; }
+
+  function parseIn(str, base) {
+    var s = str.trim().replace(/[_\s]/g, "");
+    if (!s) throw new Error("empty");
+    var neg = false;
+    if (s[0] === "+" || s[0] === "-") { neg = s[0] === "-"; s = s.slice(1); }
+    var v;
+    if (base === 10 && /^0(x|o|b)/i.test(s)) v = BigInt(s.toLowerCase());
+    else if (base === 16) v = BigInt("0x" + s);
+    else if (base === 8) v = BigInt("0o" + s);
+    else if (base === 2) v = BigInt("0b" + s);
+    else v = BigInt(s);
+    return neg ? -v : v;
+  }
+
+  function popcount(u) {
+    var n = 0n;
+    while (u > 0n) { n += u & 1n; u >>= 1n; }
+    return n;
+  }
+  function grouped(u) {
+    var w = Number(width());
+    var b = u.toString(2).padStart(w, "0");
+    return b.replace(/(.{4})(?=.)/g, "$1 ");
+  }
+  function row(k, v) { return "<div><b>" + k + "</b> &nbsp; " + v + "</div>"; }
+
+  function render(fromEl) {
+    $("msg").textContent = "";
+    var src = fromEl && fromEl.value.trim() !== "" ? fromEl :
+      ["dec", "hex", "oct", "bin"].map($).filter(function (e) { return e.value.trim() !== ""; })[0];
+    if (!src) { current = 0n; $("out").innerHTML = ""; setFields(null); renderB(); return; }
+    var u;
+    try {
+      u = wrap(parseIn(src.value, parseInt(src.getAttribute("data-base"), 10)));
+    } catch (e) {
+      $("out").innerHTML = "";
+      $("msg").textContent = "Can't parse that for the selected base.";
+      return;
+    }
+    current = u;
+    setFields(src);
+    var s = signed(u);
+    $("out").innerHTML =
+      row("Unsigned", u.toString(10)) +
+      row("Signed", s.toString(10)) +
+      row("Hex", "0x" + u.toString(16)) +
+      row("Octal", "0o" + u.toString(8)) +
+      row("Bits set", popcount(u).toString() + " of " + width().toString()) +
+      row("Binary", grouped(u));
+    renderB();
+  }
+
+  function setFields(skip) {
+    var map = { dec: current.toString(10), hex: current.toString(16), oct: current.toString(8), bin: current.toString(2) };
+    Object.keys(map).forEach(function (id) {
+      if ($(id) !== skip) $(id).value = map[id];
+    });
+  }
+
+  function renderB() {
+    var raw = $("opb").value.trim();
+    if (!raw) { $("outb").innerHTML = ""; return; }
+    var b;
+    try { b = wrap(parseIn(raw, 10)); }
+    catch (e) { $("outb").innerHTML = row("B", "can't parse"); return; }
+    var and = current & b, or = current | b, xor = current ^ b;
+    $("outb").innerHTML =
+      row("B", "0x" + b.toString(16) + " (" + b.toString(10) + ")") +
+      row("A &amp; B", "0x" + and.toString(16) + " (" + and.toString(10) + ")") +
+      row("A | B", "0x" + or.toString(16) + " (" + or.toString(10) + ")") +
+      row("A ^ B", "0x" + xor.toString(16) + " (" + xor.toString(10) + ")");
+  }
+
+  ["dec", "hex", "oct", "bin"].forEach(function (id) {
+    $(id).addEventListener("input", function () { render($(id)); });
+  });
+  $("width").addEventListener("change", function () { render(null); });
+  $("opb").addEventListener("input", renderB);
+
+  document.querySelectorAll(".tool-ops [data-op]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var amt = BigInt(Math.max(1, parseInt($("shiftamt").value, 10) || 1));
+      var op = btn.getAttribute("data-op");
+      if (op === "not") current = wrap(~current);
+      else if (op === "shl") current = wrap(current << amt);
+      else if (op === "shr") current = current >> amt;
+      $("dec").value = current.toString(10);
+      render($("dec"));
+    });
+  });
+
+  render(null);
+})();
+</script>
+</body>
+</html>
