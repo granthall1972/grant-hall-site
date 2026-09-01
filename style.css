@@ -56,7 +56,7 @@ a:hover { opacity: 0.65; }
 
 .wrap { max-width: 680px; margin: 0 auto; padding: 0 24px; }
 .wrap-wide { max-width: 880px; margin: 0 auto; padding: 0 24px; }
-.wrap-paint { max-width: 1600px; margin: 0 auto; padding: 0 24px; }
+.wrap-paint { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
 
 header.site { border-bottom: 1px solid var(--border); }
 .header-inner {
@@ -502,10 +502,11 @@ html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
   height: 70vh;
   min-height: 320px;
   overflow: auto;
+  display: grid;
   background: var(--bg);
 }
 .paint-canvas-wrap canvas {
-  display: block;
+  margin: auto;
   background: #fff;
   border: 1px solid var(--border);
   touch-action: none;

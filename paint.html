@@ -175,17 +175,22 @@
     var r = cv.getBoundingClientRect();
     var wr = wrap.getBoundingClientRect();
     var hasFocal = typeof focalX === "number";
-    var fx = hasFocal ? focalX : wr.left + wrap.clientWidth / 2;
-    var fy = hasFocal ? focalY : wr.top + wrap.clientHeight / 2;
+    var fx = hasFocal ? focalX : wr.left + wr.width / 2;
+    var fy = hasFocal ? focalY : wr.top + wr.height / 2;
+    // canvas-internal point currently under the focal point
     var cx = r.width ? (fx - r.left) / r.width * cv.width : cv.width / 2;
     var cy = r.height ? (fy - r.top) / r.height * cv.height : cv.height / 2;
     cx = Math.max(0, Math.min(cv.width, cx));
     cy = Math.max(0, Math.min(cv.height, cy));
+
     view = v;
     cv.style.width = (cv.width * view) + "px";
     cv.style.height = (cv.height * view) + "px";
-    wrap.scrollLeft = cx * view - (fx - wr.left);
-    wrap.scrollTop = cy * view - (fy - wr.top);
+
+    // measure where that point landed, then scroll to put it back under the focal
+    var r2 = cv.getBoundingClientRect();
+    wrap.scrollLeft += (r2.left + cx / cv.width * r2.width) - fx;
+    wrap.scrollTop += (r2.top + cy / cv.height * r2.height) - fy;
   }
 
   function fitView() {
@@ -345,8 +350,8 @@
     box.dataset.color = borderColor;
     var s = box.style;
     s.position = "absolute";
-    s.left = (p.x * p.scale) + "px";
-    s.top = (p.y * p.scale) + "px";
+    s.left = (cv.offsetLeft + p.x * p.scale) + "px";
+    s.top = (cv.offsetTop + p.y * p.scale) + "px";
     s.margin = "0";
     s.padding = "0";
     s.font = (fpx * p.scale) + "px/1.25 sans-serif";
