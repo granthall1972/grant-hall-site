@@ -493,7 +493,9 @@ html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
 .paint-color-row input[type="color"]::-webkit-color-swatch { border: none; }
 .paint-color-row input[type="color"]::-moz-color-swatch { border: none; }
 .paint-tsp-swatch {
-  width: 28px;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 40px;
   height: 26px;
   padding: 0;
   cursor: pointer;
@@ -506,8 +508,7 @@ html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
 }
 .paint-tsp-swatch.is-active,
 .paint-color-row input[type="color"].is-active {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  border-color: var(--accent);
 }
 
 .paint-actions { display: flex; flex-direction: column; gap: 8px; }

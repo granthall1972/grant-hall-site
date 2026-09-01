@@ -276,6 +276,14 @@
   }
   $("border").addEventListener("input", function () { setBorder($("border").value); });
   $("fill").addEventListener("input", function () { setFill($("fill").value); });
+  // first click on the swatch while transparent just selects it; only a
+  // second click (color already active) opens the native picker
+  $("border").addEventListener("click", function (e) {
+    if (borderColor === null) { e.preventDefault(); setBorder($("border").value); }
+  });
+  $("fill").addEventListener("click", function (e) {
+    if (fillColor === null) { e.preventDefault(); setFill($("fill").value); }
+  });
   $("border-tsp").addEventListener("click", function () { setBorder(null); });
   $("fill-tsp").addEventListener("click", function () { setFill(null); });
   setBorder("#e53935");
