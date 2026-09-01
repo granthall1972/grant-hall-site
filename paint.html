@@ -46,27 +46,27 @@
         <div class="paint-rail">
           <div class="paint-toolbox" id="tools">
             <button type="button" class="paint-tool is-active" data-tool="pencil" title="Pencil" aria-label="Pencil">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
             </button>
             <button type="button" class="paint-tool" data-tool="eraser" title="Eraser" aria-label="Eraser">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4L14 4a2 2 0 0 1 2.8 0L21 8.2a2 2 0 0 1 0 2.8L13 19"></path><path d="M6 21h15"></path></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4L14 4a2 2 0 0 1 2.8 0L21 8.2a2 2 0 0 1 0 2.8L13 19"></path><path d="M6 21h15"></path></svg>
             </button>
             <button type="button" class="paint-tool" data-tool="line" title="Line" aria-label="Line">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="19" x2="19" y2="5"></line></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="19" x2="19" y2="5"></line></svg>
             </button>
             <button type="button" class="paint-tool" data-tool="rect" title="Rectangle" aria-label="Rectangle">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="6" width="17" height="12" rx="1"></rect></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="6" width="17" height="12" rx="1"></rect></svg>
             </button>
             <button type="button" class="paint-tool" data-tool="ellipse" title="Ellipse" aria-label="Ellipse">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="9" ry="6.5"></ellipse></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="9" ry="6.5"></ellipse></svg>
             </button>
             <button type="button" class="paint-tool" data-tool="text" title="Text" aria-label="Text">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2"></path><path d="M12 5v14"></path><path d="M9 19h6"></path></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2"></path><path d="M12 5v14"></path><path d="M9 19h6"></path></svg>
             </button>
           </div>
 
-          <div class="paint-field">
-            <label for="size">Size (px)</label>
+          <div class="paint-group">
+            <span>Size (px)</span>
             <select id="size">
               <option>1</option>
               <option>2</option>
@@ -85,23 +85,8 @@
           </div>
 
           <div class="paint-colors">
-            <div>
-              <label for="border">Border</label>
-              <input type="color" id="border" value="#111111">
-            </div>
-            <div>
-              <label for="fill">Fill</label>
-              <input type="color" id="fill" value="#ffd54a">
-            </div>
-          </div>
-
-          <div class="paint-field">
-            <label for="shapemode">Shape style</label>
-            <select id="shapemode">
-              <option value="both">Fill + border</option>
-              <option value="border">Border only</option>
-              <option value="fill">Fill only</option>
-            </select>
+            <label>Border <input type="color" id="border" value="#111111"></label>
+            <label>Fill <input type="color" id="fill" value="#ffd54a"></label>
           </div>
 
           <div class="paint-actions">
@@ -125,7 +110,7 @@
         <button type="button" id="save-btn" class="tool-btn">Save PNG</button>
       </div>
 
-      <p class="tool-note">Everything happens on this canvas in your browser. Nothing is uploaded. Opening an image loads it onto the canvas as a flat background; there are no layers. Text tool: click on the canvas, type, then click away or press Escape to cancel.</p>
+      <p class="tool-note">Everything happens on this canvas in your browser. Nothing is uploaded. Opening an image loads it onto the canvas as a flat background; there are no layers. Text tool: pick it, click where you want the text, and type. Click away to place it, Escape to cancel.</p>
     </div>
   </div>
 </main>
@@ -145,10 +130,10 @@
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var cv = $("cv"), ctx = cv.getContext("2d"), wrap = $("cv-wrap");
+  wrap.style.position = "relative";
 
   var tool = "pencil";
   var borderColor = "#111111", fillColor = "#ffd54a";
-  var shapeMode = "both";
   var drawing = false, startX = 0, startY = 0, lastX = 0, lastY = 0, preShape = null;
   var undoStack = [];
 
@@ -176,15 +161,16 @@
     var r = cv.getBoundingClientRect();
     return {
       x: (e.clientX - r.left) * (cv.width / r.width),
-      y: (e.clientY - r.top) * (cv.height / r.height)
+      y: (e.clientY - r.top) * (cv.height / r.height),
+      scale: r.width / cv.width
     };
   }
 
-  /* tool select */
+  /* tools */
   var toolBtns = document.querySelectorAll("#tools .paint-tool");
   toolBtns.forEach(function (b) {
     b.addEventListener("click", function () {
-      commitText();
+      killText(true);
       toolBtns.forEach(function (x) { x.classList.toggle("is-active", x === b); });
       tool = b.getAttribute("data-tool");
     });
@@ -192,9 +178,8 @@
 
   $("border").addEventListener("input", function () { borderColor = $("border").value; setActiveSwatch(null); });
   $("fill").addEventListener("input", function () { fillColor = $("fill").value; });
-  $("shapemode").addEventListener("change", function () { shapeMode = $("shapemode").value; });
 
-  /* palette (swatch colors defined in style.css by child order) */
+  /* palette (swatch colors come from style.css, by child order) */
   var PALETTE = ["#000000", "#ffffff", "#808080", "#c0c0c0", "#e53935", "#fb8c00", "#fdd835", "#43a047",
                  "#00acc1", "#1e88e5", "#3949ab", "#8e24aa", "#d81b60", "#6d4c41", "#f5f5f5", "#004d40"];
   var paletteBox = $("palette");
@@ -204,14 +189,8 @@
     b.className = "pal-sw";
     b.title = c + "  •  shift-click sets fill";
     b.addEventListener("click", function (ev) {
-      if (ev.shiftKey) {
-        fillColor = c;
-        $("fill").value = c;
-      } else {
-        borderColor = c;
-        $("border").value = c;
-        setActiveSwatch(b);
-      }
+      if (ev.shiftKey) { fillColor = c; $("fill").value = c; }
+      else { borderColor = c; $("border").value = c; setActiveSwatch(b); }
     });
     paletteBox.appendChild(b);
   });
@@ -221,7 +200,7 @@
 
   /* freehand + shapes */
   cv.addEventListener("pointerdown", function (e) {
-    if (tool === "text") { e.preventDefault(); showText(e); return; }
+    if (tool === "text") { e.preventDefault(); startText(e); return; }
     cv.setPointerCapture(e.pointerId);
     var p = canvasPos(e);
     drawing = true;
@@ -277,103 +256,96 @@
     ctx.lineCap = "round";
     ctx.strokeStyle = borderColor;
     ctx.fillStyle = fillColor;
-
+    ctx.beginPath();
     if (tool === "line") {
-      ctx.beginPath();
       ctx.moveTo(x0, y0);
       ctx.lineTo(x1, y1);
       ctx.stroke();
       return;
     }
-
-    ctx.beginPath();
     if (tool === "rect") {
       ctx.rect(x0, y0, x1 - x0, y1 - y0);
     } else if (tool === "ellipse") {
       ctx.ellipse((x0 + x1) / 2, (y0 + y1) / 2, Math.abs(x1 - x0) / 2, Math.abs(y1 - y0) / 2, 0, 0, Math.PI * 2);
     }
-    if (shapeMode !== "border") ctx.fill();
-    if (shapeMode !== "fill") ctx.stroke();
+    ctx.fill();
+    ctx.stroke();
   }
 
-  /* text tool: edit in place on the canvas, MS Paint style */
-  var textBox = null, onDocDown = null;
+  /* text tool: type directly on the canvas at the click point */
+  var textBox = null, textDocDown = null;
 
-  function showText(e) {
-    commitText();
-    var r = cv.getBoundingClientRect();
-    var wrapRect = wrap.getBoundingClientRect();
-    var scale = r.width / cv.width;
+  function startText(e) {
+    killText(true);
+    var p = canvasPos(e);
     var fpx = sizePx();
-    var cp = canvasPos(e);
 
     var box = document.createElement("div");
-    box.className = "paint-text-input";
     box.contentEditable = "true";
     box.spellcheck = false;
-    box.style.left = (e.clientX - wrapRect.left) + "px";
-    box.style.top = (e.clientY - wrapRect.top) + "px";
-    box.style.fontSize = (fpx * scale) + "px";
-    box.style.color = borderColor;
-    box.dataset.x = cp.x;
-    box.dataset.y = cp.y;
+    box.className = "paint-text-input";
+    box.dataset.x = p.x;
+    box.dataset.y = p.y;
     box.dataset.fpx = fpx;
     box.dataset.color = borderColor;
+    var s = box.style;
+    s.position = "absolute";
+    s.left = (p.x * p.scale) + "px";
+    s.top = (p.y * p.scale) + "px";
+    s.margin = "0";
+    s.padding = "0";
+    s.font = (fpx * p.scale) + "px/1.25 sans-serif";
+    s.color = borderColor;
+    s.background = "transparent";
+    s.whiteSpace = "pre";
+    s.outline = "1px dashed rgba(128,128,128,0.9)";
+    s.minWidth = "1px";
+    s.zIndex = "10";
+    s.cursor = "text";
     wrap.appendChild(box);
     textBox = box;
+    box.focus();
+    requestAnimationFrame(function () { if (textBox === box) box.focus(); });
 
     box.addEventListener("keydown", function (ev) {
-      if (ev.key === "Escape") { ev.preventDefault(); cancelText(); }
-      else if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); commitText(); }
+      if (ev.key === "Escape") { ev.preventDefault(); killText(false); }
+      else if (ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); killText(true); }
     });
-    box.addEventListener("blur", commitText);
+    box.addEventListener("blur", function () { killText(true); });
 
+    textDocDown = function (ev) {
+      if (textBox && ev.target !== textBox && !textBox.contains(ev.target)) killText(true);
+    };
     setTimeout(function () {
-      if (textBox !== box) return;
-      box.focus();
-      onDocDown = function (ev) {
-        if (textBox && ev.target !== textBox) commitText();
-      };
-      document.addEventListener("pointerdown", onDocDown, true);
+      if (textBox === box) document.addEventListener("pointerdown", textDocDown, true);
     }, 0);
   }
 
-  function teardownText() {
-    if (onDocDown) {
-      document.removeEventListener("pointerdown", onDocDown, true);
-      onDocDown = null;
-    }
-    if (textBox) {
-      var t = textBox;
-      textBox = null;
-      t.remove();
-    }
-  }
-  function cancelText() { teardownText(); }
-
-  function commitText() {
+  function killText(commit) {
     if (!textBox) return;
     var box = textBox;
-    var val = box.innerText.replace(/\n$/, "");
-    var x = parseFloat(box.dataset.x);
-    var y = parseFloat(box.dataset.y);
-    var fpx = parseFloat(box.dataset.fpx);
-    var col = box.dataset.color;
-    teardownText();
-    if (val !== "") {
+    textBox = null;
+    if (textDocDown) {
+      document.removeEventListener("pointerdown", textDocDown, true);
+      textDocDown = null;
+    }
+    var val = commit ? box.innerText.replace(/\s+$/, "") : "";
+    var x = parseFloat(box.dataset.x), y = parseFloat(box.dataset.y);
+    var fpx = parseFloat(box.dataset.fpx), col = box.dataset.color;
+    box.remove();
+    if (val) {
       pushUndo();
       ctx.fillStyle = col;
       ctx.font = fpx + "px sans-serif";
       ctx.textBaseline = "top";
-      var lines = val.split("\n");
-      for (var i = 0; i < lines.length; i++) {
-        ctx.fillText(lines[i], x, y + i * fpx * 1.2);
-      }
+      val.split("\n").forEach(function (line, i) {
+        ctx.fillText(line, x, y + i * fpx * 1.25);
+      });
     }
   }
 
   /* open image */
-  $("open-btn").addEventListener("click", function () { commitText(); $("file").click(); });
+  $("open-btn").addEventListener("click", function () { killText(true); $("file").click(); });
   $("file").addEventListener("change", function () {
     var f = $("file").files[0];
     if (!f) return;
@@ -390,9 +362,9 @@
   });
 
   /* undo / clear */
-  $("undo-btn").addEventListener("click", function () { commitText(); undo(); });
+  $("undo-btn").addEventListener("click", function () { killText(true); undo(); });
   $("clear-btn").addEventListener("click", function () {
-    commitText();
+    killText(true);
     if (!window.confirm("Clear the canvas?")) return;
     pushUndo();
     ctx.fillStyle = "#ffffff";
@@ -409,7 +381,7 @@
 
   /* save */
   $("save-btn").addEventListener("click", function () {
-    commitText();
+    killText(true);
     var name = $("fname").value.trim() || "drawing.png";
     cv.toBlob(function (blob) {
       var a = document.createElement("a");
