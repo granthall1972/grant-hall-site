@@ -34,7 +34,7 @@
 </header>
 
 <main>
-  <div class="wrap-wide">
+  <div class="wrap-paint">
     <a class="back-link" href="tools.html">&larr; Tools</a>
     <div class="page-head">
       <h1>Paint</h1>
@@ -64,7 +64,7 @@
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5h16v2"></path><path d="M12 5v14"></path><path d="M9 19h6"></path></svg>
             </button>
             <button type="button" class="paint-tool" data-tool="zoom" title="Magnifier — click to zoom in, Alt+click or right-click to zoom out" aria-label="Magnifier">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"></circle><line x1="21" y1="21" x2="15.8" y2="15.8"></line><line x1="10.5" y1="7.7" x2="10.5" y2="13.3"></line><line x1="7.7" y1="10.5" x2="13.3" y2="10.5"></line></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"></circle><line x1="21" y1="21" x2="15.8" y2="15.8"></line><line id="zoom-plus-v" x1="10.5" y1="7.7" x2="10.5" y2="13.3"></line><line x1="7.7" y1="10.5" x2="13.3" y2="10.5"></line></svg>
             </button>
           </div>
 
@@ -93,7 +93,6 @@
           </div>
 
           <div class="paint-actions">
-            <button type="button" id="zoom-reset" class="tool-btn sub">zoom 100%</button>
             <button type="button" id="open-btn" class="tool-btn sub">open image</button>
             <input type="file" id="file" accept="image/*" hidden>
             <button type="button" id="undo-btn" class="tool-btn sub">undo</button>
@@ -112,7 +111,7 @@
         <button type="button" id="save-btn" class="tool-btn">Save PNG</button>
       </div>
 
-      <p class="tool-note">Everything happens on this canvas in your browser. Nothing is uploaded. Opening an image loads it onto the canvas as a flat background; there are no layers. Text tool: pick it, click where you want the text, and type. Click away to place it, Escape to cancel. Zoom: scroll wheel over the canvas, or the magnifier (click to zoom in, Alt+click or right-click to zoom out). Middle-drag to pan, "zoom" button to fit.</p>
+      <p class="tool-note">Everything happens on this canvas in your browser. Nothing is uploaded. Opening an image loads it onto the canvas as a flat background; there are no layers. Text tool: pick it, click where you want the text, and type. Click away to place it, Escape to cancel. Zoom: scroll wheel over the canvas, or the magnifier (click to zoom in, Alt+click or right-click to zoom out). Middle-drag to pan. Ctrl+0, or click the magnifier again, to fit.</p>
     </div>
   </div>
 </main>
@@ -171,8 +170,6 @@
   /* zoom + pan */
   var view = 1, MIN_VIEW = 0.05, MAX_VIEW = 32;
 
-  function updateZoomLabel() { $("zoom-reset").textContent = "zoom " + Math.round(view * 100) + "%"; }
-
   function applyView(v, focalX, focalY) {
     v = Math.max(MIN_VIEW, Math.min(MAX_VIEW, v));
     var r = cv.getBoundingClientRect();
@@ -189,12 +186,11 @@
     cv.style.height = (cv.height * view) + "px";
     wrap.scrollLeft = cx * view - (fx - wr.left);
     wrap.scrollTop = cy * view - (fy - wr.top);
-    updateZoomLabel();
   }
 
   function fitView() {
     var w = wrap.clientWidth || cv.width;
-    var h = (window.innerHeight || 800) * 0.72;
+    var h = wrap.clientHeight || cv.height;
     applyView(Math.min(w / cv.width, h / cv.height, 1));
   }
 
@@ -224,20 +220,27 @@
     if (e.button === 1) { panning = false; wrap.style.cursor = ""; }
   });
   cv.addEventListener("contextmenu", function (e) { if (tool === "zoom") e.preventDefault(); });
-  $("zoom-reset").addEventListener("click", fitView);
 
   /* tools */
   var toolBtns = document.querySelectorAll("#tools .paint-tool");
+  var zoomVBar = $("zoom-plus-v");
+  function setZoomOutHint(on) {
+    if (zoomVBar) zoomVBar.hidden = on;
+    if (tool === "zoom") cv.style.cursor = on ? "zoom-out" : "zoom-in";
+  }
   toolBtns.forEach(function (b) {
     b.addEventListener("click", function () {
       killText(true);
+      var already = b.classList.contains("is-active");
       toolBtns.forEach(function (x) { x.classList.toggle("is-active", x === b); });
       tool = b.getAttribute("data-tool");
+      setZoomOutHint(false);
       cv.style.cursor = tool === "zoom" ? "zoom-in" : "";
+      if (tool === "zoom" && already) fitView();
     });
   });
-  document.addEventListener("keydown", function (e) { if (e.key === "Alt" && tool === "zoom") cv.style.cursor = "zoom-out"; });
-  document.addEventListener("keyup", function (e) { if (e.key === "Alt" && tool === "zoom") cv.style.cursor = "zoom-in"; });
+  document.addEventListener("keydown", function (e) { if (e.key === "Alt" && tool === "zoom") setZoomOutHint(true); });
+  document.addEventListener("keyup", function (e) { if (e.key === "Alt") setZoomOutHint(false); });
 
   $("border").addEventListener("input", function () { borderColor = $("border").value; });
   $("fill").addEventListener("input", function () { fillColor = $("fill").value; });
