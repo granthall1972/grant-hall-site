@@ -120,6 +120,19 @@ footer.site { border-top: 1px solid var(--border); }
 .page-head { margin-bottom: 40px; }
 .page-head p { color: var(--muted); font-size: 14px; max-width: 500px; margin: 0; }
 
+.tool-search {
+  width: 100%;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  margin-bottom: 24px;
+}
+.tool-search::placeholder { color: var(--muted); }
+
+.tools-empty { color: var(--muted); font-size: 14px; }
+
 .tools-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
