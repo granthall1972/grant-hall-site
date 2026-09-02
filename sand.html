@@ -39,7 +39,7 @@
     <a class="back-link" href="fun.html">&larr; Fun</a>
     <div class="page-head">
       <h1>Falling Sand</h1>
-      <p>Draw materials on the box and watch the physics play out. Sand piles, water levels, oil floats, fire spreads, acid eats, plants creep.</p>
+      <p>Draw materials on the box and watch the physics play out. Sand piles, water levels, oil floats, fire spreads, acid eats, plants creep, TNT goes boom.</p>
     </div>
 
     <div class="sand-wrap">
@@ -52,6 +52,7 @@
           <button type="button" class="sand-mat" data-mat="wood">Wood</button>
           <button type="button" class="sand-mat" data-mat="plant">Plant</button>
           <button type="button" class="sand-mat" data-mat="wall">Wall</button>
+          <button type="button" class="sand-mat" data-mat="tnt">TNT</button>
           <button type="button" class="sand-mat" data-mat="ice">Ice</button>
           <button type="button" class="sand-mat" data-mat="acid">Acid</button>
           <button type="button" class="sand-mat" data-mat="spout-water">Water Spout</button>
@@ -82,7 +83,7 @@
       </div>
     </div>
 
-    <p class="tool-note">Runs entirely in your browser. Drag on the box to draw the selected material. Water puts out fire and makes steam; steam condenses back to water. Oil floats on water and burns. Acid dissolves most things but not walls. Spouts endlessly drip whatever they&rsquo;re made of &mdash; water, sand, oil, acid or fire. Plant creeps along water; ice melts near fire and slowly freezes water it touches.</p>
+    <p class="tool-note">Runs entirely in your browser. Drag on the box to draw the selected material. Water puts out fire and makes steam; steam condenses back to water. Oil floats on water and burns. Acid dissolves most things but not walls. Spouts endlessly drip whatever they&rsquo;re made of &mdash; water, sand, oil, acid or fire. Plant creeps along water; ice melts near fire and slowly freezes water it touches. TNT sits still until fire touches it, then blows a hole, throws flames and sets off any other TNT in range.</p>
   </div>
 </main>
 
@@ -104,9 +105,9 @@
   var W = cv.width, H = cv.height, N = W * H;
 
   var EMPTY = 0, SAND = 1, WATER = 2, OIL = 3, FIRE = 4, WOOD = 5, PLANT = 6,
-      WALL = 7, ICE = 8, ACID = 9, SMOKE = 10, STEAM = 11, SPOUT = 12;
+      WALL = 7, ICE = 8, ACID = 9, SMOKE = 10, STEAM = 11, SPOUT = 12, TNT = 13;
   var MAT = { sand: SAND, water: WATER, oil: OIL, fire: FIRE, wood: WOOD, plant: PLANT,
-             wall: WALL, ice: ICE, acid: ACID };
+             wall: WALL, tnt: TNT, ice: ICE, acid: ACID };
   var SPOUT_MAT = { "spout-water": WATER, "spout-sand": SAND, "spout-oil": OIL,
                    "spout-acid": ACID, "spout-fire": FIRE };
 
@@ -123,6 +124,7 @@
   COL[SMOKE] = [95, 95, 100];
   COL[STEAM] = [200, 212, 222];
   COL[SPOUT] = [47, 127, 196];
+  COL[TNT] = [196, 40, 36];
   var FIRE_COLS = [[255, 148, 51], [255, 96, 33], [255, 200, 64], [214, 60, 24]];
 
   var grid = new Uint8Array(N);
@@ -266,6 +268,45 @@
     }
   }
 
+  function tnt(x, y, i) {
+    if (aux[i] > 0) {
+      if (--aux[i] === 0) { setCell(i, FIRE, 12 + (Math.random() * 16 | 0)); explode(x, y); }
+      return;
+    }
+    var ns = n4(x, y);
+    for (var k = 0; k < ns.length; k++) {
+      if (grid[ns[k]] === FIRE) { aux[i] = 5 + (Math.random() * 6 | 0); return; }
+    }
+  }
+
+  function explode(cx, cy) {
+    var RAD = 15, r2 = RAD * RAD;
+    for (var dy = -RAD; dy <= RAD; dy++) {
+      for (var dx = -RAD; dx <= RAD; dx++) {
+        var dd = dx * dx + dy * dy;
+        if (dd > r2) continue;
+        var j = idx(cx + dx, cy + dy);
+        if (j < 0) continue;
+        var m = grid[j];
+        if (m === SPOUT) continue;
+        if (m === TNT) { if (aux[j] === 0) aux[j] = 1 + (Math.random() * 3 | 0); continue; }
+        var edge = dd / r2;
+        if (edge < 0.4) {
+          setCell(j, Math.random() < 0.7 ? FIRE : EMPTY, 18 + (Math.random() * 40 | 0));
+        } else if (edge < 0.8) {
+          var roll = Math.random();
+          if (roll < 0.28) setCell(j, FIRE, 18 + (Math.random() * 40 | 0));
+          else if (roll < 0.42) setCell(j, SMOKE, 80 + (Math.random() * 80 | 0));
+          else setCell(j, EMPTY, 0);
+        } else if (m === WOOD || m === PLANT || m === OIL) {
+          setCell(j, FIRE, 26 + (Math.random() * 40 | 0));
+        } else if (m !== WALL && Math.random() < 0.3) {
+          setCell(j, Math.random() < 0.5 ? SMOKE : EMPTY, 80 + (Math.random() * 80 | 0));
+        }
+      }
+    }
+  }
+
   function stepSim() {
     moved.fill(0);
     var dir = (frame & 1) ? 1 : -1;
@@ -281,6 +322,7 @@
         else if (m === PLANT) plant(x, y, i);
         else if (m === ICE) ice(x, y, i);
         else if (m === SPOUT) spout(x, y, i);
+        else if (m === TNT) tnt(x, y, i);
       }
     }
     frame++;
@@ -297,6 +339,7 @@
         var sb = se === FIRE ? [255, 140, 60] : (COL[se] || COL[SPOUT]);
         c = [(sb[0] + 90) >> 1, (sb[1] + 92) >> 1, (sb[2] + 98) >> 1];
       }
+      else if (m === TNT) c = (aux[i] > 0 && (frame & 2)) ? [255, 232, 120] : COL[TNT];
       else c = COL[m];
       var n = m === EMPTY ? 0 : NOISE[i & 1023];
       d[p] = c[0] + n < 0 ? 0 : c[0] + n > 255 ? 255 : c[0] + n;

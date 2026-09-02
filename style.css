@@ -473,14 +473,15 @@ html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
 .sand-mat:nth-child(5)::before { background: #785230; }
 .sand-mat:nth-child(6)::before { background: #3fa34d; }
 .sand-mat:nth-child(7)::before { background: #80858c; }
-.sand-mat:nth-child(8)::before { background: #9bd3ef; }
-.sand-mat:nth-child(9)::before { background: #b0d628; }
-.sand-mat:nth-child(10)::before { background: #4b7fa6; }
-.sand-mat:nth-child(11)::before { background: #98876b; }
-.sand-mat:nth-child(12)::before { background: #43403e; }
-.sand-mat:nth-child(13)::before { background: #859945; }
-.sand-mat:nth-child(14)::before { background: #ac744f; }
-.sand-mat:nth-child(15)::before {
+.sand-mat:nth-child(8)::before { background: #c62828; }
+.sand-mat:nth-child(9)::before { background: #9bd3ef; }
+.sand-mat:nth-child(10)::before { background: #b0d628; }
+.sand-mat:nth-child(11)::before { background: #4b7fa6; }
+.sand-mat:nth-child(12)::before { background: #98876b; }
+.sand-mat:nth-child(13)::before { background: #43403e; }
+.sand-mat:nth-child(14)::before { background: #859945; }
+.sand-mat:nth-child(15)::before { background: #ac744f; }
+.sand-mat:nth-child(16)::before {
   background: #fff;
   background-image: linear-gradient(to bottom right, transparent 42%, #e53935 42%, #e53935 58%, transparent 58%);
 }
