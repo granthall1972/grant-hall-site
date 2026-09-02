@@ -54,9 +54,11 @@
           <button type="button" class="sand-mat" data-mat="wall">Wall</button>
           <button type="button" class="sand-mat" data-mat="ice">Ice</button>
           <button type="button" class="sand-mat" data-mat="acid">Acid</button>
-          <button type="button" class="sand-mat" data-mat="smoke">Smoke</button>
-          <button type="button" class="sand-mat" data-mat="steam">Steam</button>
-          <button type="button" class="sand-mat" data-mat="spout">Spout</button>
+          <button type="button" class="sand-mat" data-mat="spout-water">Water Spout</button>
+          <button type="button" class="sand-mat" data-mat="spout-sand">Sand Spout</button>
+          <button type="button" class="sand-mat" data-mat="spout-oil">Oil Spout</button>
+          <button type="button" class="sand-mat" data-mat="spout-acid">Acid Spout</button>
+          <button type="button" class="sand-mat" data-mat="spout-fire">Fire Spout</button>
           <button type="button" class="sand-mat" data-mat="erase">Erase</button>
         </div>
 
@@ -80,7 +82,7 @@
       </div>
     </div>
 
-    <p class="tool-note">Runs entirely in your browser. Drag on the box to draw the selected material. Water puts out fire and makes steam; steam condenses back to water. Oil floats on water and burns. Acid dissolves most things but not walls. Spout drips water. Plant creeps along water; ice melts near fire and slowly freezes water it touches.</p>
+    <p class="tool-note">Runs entirely in your browser. Drag on the box to draw the selected material. Water puts out fire and makes steam; steam condenses back to water. Oil floats on water and burns. Acid dissolves most things but not walls. Spouts endlessly drip whatever they&rsquo;re made of &mdash; water, sand, oil, acid or fire. Plant creeps along water; ice melts near fire and slowly freezes water it touches.</p>
   </div>
 </main>
 
@@ -104,7 +106,9 @@
   var EMPTY = 0, SAND = 1, WATER = 2, OIL = 3, FIRE = 4, WOOD = 5, PLANT = 6,
       WALL = 7, ICE = 8, ACID = 9, SMOKE = 10, STEAM = 11, SPOUT = 12;
   var MAT = { sand: SAND, water: WATER, oil: OIL, fire: FIRE, wood: WOOD, plant: PLANT,
-             wall: WALL, ice: ICE, acid: ACID, smoke: SMOKE, steam: STEAM, spout: SPOUT };
+             wall: WALL, ice: ICE, acid: ACID };
+  var SPOUT_MAT = { "spout-water": WATER, "spout-sand": SAND, "spout-oil": OIL,
+                   "spout-acid": ACID, "spout-fire": FIRE };
 
   var COL = {};
   COL[EMPTY] = [15, 17, 21];
@@ -251,7 +255,15 @@
   }
   function spout(x, y, i) {
     var b = idx(x, y + 1);
-    if (b >= 0 && grid[b] === EMPTY) setCell(b, WATER, 0);
+    if (b < 0 || grid[b] !== EMPTY) return;
+    var emit = aux[i] || WATER;
+    if (emit === SAND && Math.random() < 0.4) return;
+    if (emit === FIRE) {
+      if (Math.random() < 0.45) return;
+      setCell(b, FIRE, 24 + (Math.random() * 32 | 0));
+    } else {
+      setCell(b, emit, 0);
+    }
   }
 
   function stepSim() {
@@ -280,6 +292,11 @@
     for (var i = 0, p = 0; i < N; i++, p += 4) {
       var m = grid[i], c;
       if (m === FIRE) c = FIRE_COLS[(i + frame) & 3];
+      else if (m === SPOUT) {
+        var se = aux[i];
+        var sb = se === FIRE ? [255, 140, 60] : (COL[se] || COL[SPOUT]);
+        c = [(sb[0] + 90) >> 1, (sb[1] + 92) >> 1, (sb[2] + 98) >> 1];
+      }
       else c = COL[m];
       var n = m === EMPTY ? 0 : NOISE[i & 1023];
       d[p] = c[0] + n < 0 ? 0 : c[0] + n > 255 ? 255 : c[0] + n;
@@ -305,11 +322,10 @@
         var i = idx(cx + dx, cy + dy);
         if (i < 0) continue;
         if (curMat === "erase") { grid[i] = EMPTY; aux[i] = 0; continue; }
+        if (SPOUT_MAT[curMat] !== undefined) { grid[i] = SPOUT; aux[i] = SPOUT_MAT[curMat]; continue; }
         var m = MAT[curMat];
         grid[i] = m;
-        aux[i] = m === FIRE ? 40 + (Math.random() * 50 | 0)
-          : m === SMOKE ? 70 + (Math.random() * 80 | 0)
-          : m === STEAM ? 150 + (Math.random() * 90 | 0) : 0;
+        aux[i] = m === FIRE ? 40 + (Math.random() * 50 | 0) : 0;
       }
     }
   }
