@@ -499,6 +499,54 @@ html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
   touch-action: none;
   cursor: crosshair;
 }
+.tank-wrap { display: flex; gap: 24px; align-items: flex-start; }
+.tank-side { flex: 0 0 190px; display: flex; flex-direction: column; gap: 22px; }
+.tank-sec-h { font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin: 0 0 -8px; }
+.tank-species { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.tank-fish {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  padding: 7px 8px;
+  cursor: pointer;
+}
+.tank-fish::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 62% 62% 66% 6%;
+  transform: rotate(8deg);
+  background: rgba(128, 128, 128, 0.6);
+}
+.tank-fish:hover { color: var(--text); border-color: var(--accent); }
+.tank-fish:nth-child(1)::before { background: #2f6bff; }
+.tank-fish:nth-child(2)::before { background: #ff7a1a; }
+.tank-fish:nth-child(3)::before { background: #ffcf1f; }
+.tank-fish:nth-child(4)::before { background: #dfe9ef; }
+.tank-fish:nth-child(5)::before { background: #8b5cff; }
+.tank-fish:nth-child(6)::before { background: #c2185b; }
+.tank-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.tank-actions .tool-btn { margin: 0; }
+.tank-count { font-size: 12px; color: var(--muted); }
+.tank-count b { color: var(--accent); font-variant-numeric: tabular-nums; }
+.tank-canvas-wrap { flex: 1 1 520px; min-width: 0; }
+.tank-canvas-wrap canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #04233a;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  touch-action: none;
+  cursor: pointer;
+}
 .tool-ops { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 18px; }
 .tool-ops .tool-btn { margin: 0; }
 .rx-hl {
@@ -654,4 +702,7 @@ html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
   .sand-wrap { flex-direction: column; }
   .sand-side { flex-basis: auto; width: 100%; }
   .sand-mats { grid-template-columns: repeat(3, 1fr); }
+  .tank-wrap { flex-direction: column; }
+  .tank-side { flex-basis: auto; width: 100%; }
+  .tank-species { grid-template-columns: repeat(3, 1fr); }
 }
