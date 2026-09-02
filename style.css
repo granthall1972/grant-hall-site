@@ -518,20 +518,19 @@ html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
 }
 .tank-fish::before {
   content: "";
-  width: 12px;
-  height: 12px;
+  width: 11px;
+  height: 11px;
   flex: none;
-  border-radius: 62% 62% 66% 6%;
-  transform: rotate(8deg);
-  background: rgba(128, 128, 128, 0.6);
+  border-radius: 0;
+  background: #808080;
 }
 .tank-fish:hover { color: var(--text); border-color: var(--accent); }
-.tank-fish:nth-child(1)::before { background: #2f6bff; }
-.tank-fish:nth-child(2)::before { background: #ff7a1a; }
-.tank-fish:nth-child(3)::before { background: #ffcf1f; }
-.tank-fish:nth-child(4)::before { background: #dfe9ef; }
-.tank-fish:nth-child(5)::before { background: #8b5cff; }
-.tank-fish:nth-child(6)::before { background: #c2185b; }
+.tank-fish:nth-child(1)::before { background: #1f6fff; }
+.tank-fish:nth-child(2)::before { background: #ff7a1f; }
+.tank-fish:nth-child(3)::before { background: #ffd21f; }
+.tank-fish:nth-child(4)::before { background: #3ad0e0; }
+.tank-fish:nth-child(5)::before { background: #c24bff; }
+.tank-fish:nth-child(6)::before { background: #ff2f5f; }
 .tank-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .tank-actions .tool-btn { margin: 0; }
 .tank-count { font-size: 12px; color: var(--muted); }
@@ -541,9 +540,11 @@ html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
   display: block;
   width: 100%;
   height: auto;
-  background: #04233a;
+  background: #0a1c44;
   border: 1px solid var(--border);
-  border-radius: 3px;
+  border-radius: 0;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
   touch-action: none;
   cursor: pointer;
 }
