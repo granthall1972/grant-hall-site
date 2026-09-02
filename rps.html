@@ -39,7 +39,7 @@
     <a class="back-link" href="fun.html">&larr; Fun</a>
     <div class="page-head">
       <h1>Rock Paper Scissors Battle</h1>
-      <p>Set the roster, hit start, watch them fight. Rock crushes scissors, scissors cut paper, paper covers rock. Loser dies.</p>
+      <p>Set the roster, hit start, watch them fight. Rock crushes scissors, scissors cut paper, paper covers rock. The loser isn&rsquo;t out &mdash; it converts to the winner&rsquo;s type, so one kind takes over the board.</p>
     </div>
 
     <div id="setup" class="rps-setup">
@@ -115,8 +115,7 @@
           x: R + Math.random() * (W - 2 * R),
           y: R + Math.random() * (H - 2 * R),
           vx: Math.cos(ang) * base,
-          vy: Math.sin(ang) * base,
-          dead: false
+          vy: Math.sin(ang) * base
         });
       }
     });
@@ -149,10 +148,8 @@
 
     for (i = 0; i < objs.length; i++) {
       a = objs[i];
-      if (a.dead) continue;
       for (j = i + 1; j < objs.length; j++) {
         b = objs[j];
-        if (b.dead) continue;
         var dx = b.x - a.x, dy = b.y - a.y;
         var d2 = dx * dx + dy * dy;
         var min = 2 * R;
@@ -160,26 +157,21 @@
         var d = Math.sqrt(d2) || 0.0001;
         var nx = dx / d, ny = dy / d;
 
-        if (a.type === b.type) {
-          var overlap = min - d;
-          a.x -= nx * overlap / 2; a.y -= ny * overlap / 2;
-          b.x += nx * overlap / 2; b.y += ny * overlap / 2;
-          var avn = a.vx * nx + a.vy * ny, bvn = b.vx * nx + b.vy * ny;
-          a.vx += (bvn - avn) * nx; a.vy += (bvn - avn) * ny;
-          b.vx += (avn - bvn) * nx; b.vy += (avn - bvn) * ny;
-        } else {
+        if (a.type !== b.type) {
           var winr = BEATS[a.type] === b.type ? a : b;
           var losr = winr === a ? b : a;
-          losr.dead = true;
-          var s = winr === a ? -1 : 1;
-          winr.x += nx * R * s;
-          winr.y += ny * R * s;
+          losr.type = winr.type;
           lastKill = performance.now();
         }
+
+        var overlap = min - d;
+        a.x -= nx * overlap / 2; a.y -= ny * overlap / 2;
+        b.x += nx * overlap / 2; b.y += ny * overlap / 2;
+        var avn = a.vx * nx + a.vy * ny, bvn = b.vx * nx + b.vy * ny;
+        a.vx += (bvn - avn) * nx; a.vy += (bvn - avn) * ny;
+        b.vx += (avn - bvn) * nx; b.vy += (avn - bvn) * ny;
       }
     }
-
-    for (i = objs.length - 1; i >= 0; i--) if (objs[i].dead) objs.splice(i, 1);
 
     for (i = 0; i < objs.length; i++) {
       a = objs[i];
