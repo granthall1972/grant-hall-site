@@ -1,8 +1,18 @@
-# Cloudflare Pages headers
-# Force browsers to revalidate CSS/JS so deploys show up without a hard refresh.
+# Cloudflare Pages headers.
+# Never cache CSS/JS anywhere - browser or Cloudflare edge. The whole site
+# is a few KB, so re-fetching on every load is free, and it kills every
+# "my change isn't showing up" cache bug for good.
 
-/style.css
-  Cache-Control: no-cache
+/*.css
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
+  Pragma: no-cache
+  Expires: 0
 
-/script.js
-  Cache-Control: no-cache
+/*.js
+  Cache-Control: no-store, no-cache, must-revalidate, max-age=0
+  CDN-Cache-Control: no-store
+  Cloudflare-CDN-Cache-Control: no-store
+  Pragma: no-cache
+  Expires: 0
