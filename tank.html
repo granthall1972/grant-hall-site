@@ -61,7 +61,6 @@
 
         <div>
           <label class="tool-check"><input type="checkbox" id="bubbles" checked> Bubbles</label>
-          <label class="tool-check"><input type="checkbox" id="rays" checked> Light rays</label>
           <label class="tool-check"><input type="checkbox" id="scan" checked> Scanlines</label>
         </div>
 
@@ -105,7 +104,7 @@
   var b = off.getContext("2d");
 
   var fish = [], food = [], bub = [];
-  var paused = false, pace = 3, bubblesOn = true, raysOn = true, scanOn = true;
+  var paused = false, pace = 3, bubblesOn = true, scanOn = true;
   var bubbleT = 0;
 
   function px(x, y, w, h, c) { b.fillStyle = c; b.fillRect(x | 0, y | 0, w || 1, h || 1); }
@@ -130,7 +129,7 @@
     ctx.imageSmoothingEnabled = false;
   }
 
-  var PEBBLE = [], WEED = [], RAYS = [];
+  var PEBBLE = [], WEED = [];
   function buildScenery() {
     PEBBLE = [];
     for (var i = 0; i < 5; i++) {
@@ -151,8 +150,6 @@
         front: false
       });
     }
-    RAYS = [];
-    for (var r = 0; r < 3; r++) RAYS.push({ x: Math.random(), p: Math.random() * 7 });
   }
 
   /* ---------- fish ---------- */
@@ -234,33 +231,32 @@
         ay += Math.sin(f.spook) * 3.2;
       }
 
-      var mg = 9;
-      if (f.x < mg) ax += (mg - f.x) / mg * 2.4;
-      else if (f.x > BW - mg) ax -= (f.x - (BW - mg)) / mg * 2.4;
-      if (f.y < 8) ay += (8 - f.y) / 8 * 2.6;
-      else if (f.y > floorLim - 12) ay -= (f.y - (floorLim - 12)) / 12 * 2.8;
+      var mg = 24;
+      if (f.x < mg) ax += (1 - f.x / mg) * 3.4;
+      else if (f.x > BW - mg) ax -= (1 - (BW - f.x) / mg) * 3.4;
+      if (f.y < mg) ay += (1 - f.y / mg) * 3.4;
+      else if (f.y > floorLim - mg) ay -= (1 - (floorLim - f.y) / mg) * 3.6;
+
+      // gently bias heading back toward level, without ever locking a turn
+      ay -= Math.sin(f.dir) * 0.6;
 
       var des = Math.atan2(ay, ax);
       var da = angDiff(des, f.dir);
-      var maxT = 2.0 + 2.6 * lively + (f.startle > 0 ? 5 : 0);
+      var maxT = 2.4 + 2.6 * lively + (f.startle > 0 ? 5 : 0);
       var turn = Math.max(-maxT * dt, Math.min(maxT * dt, da));
       f.dir += turn;
       f.turnv = f.turnv * 0.82 + (turn / Math.max(dt, 0.001)) * 0.18;
-
-      var sn = Math.sin(f.dir);
-      if (sn > 0.8 || sn < -0.8) {
-        var cs = Math.cos(f.dir) < 0 ? -1 : 1;
-        var ny = Math.max(-0.8, Math.min(0.8, sn));
-        f.dir = Math.atan2(ny, cs * Math.sqrt(1 - ny * ny));
-      }
 
       var tgt = f.sp0 * lively * (f.startle > 0 ? 2.4 : 1) * (f.fed > 0 ? 1.5 : 1);
       f.v += (tgt - f.v) * Math.min(1, dt * 2.5);
 
       f.x += Math.cos(f.dir) * f.v * dt;
       f.y += Math.sin(f.dir) * f.v * dt;
-      f.x = f.x < 3 ? 3 : f.x > BW - 3 ? BW - 3 : f.x;
-      f.y = f.y < 6 ? 6 : f.y > floorLim ? floorLim : f.y;
+      // hard bounce so a fish can never pin itself against an edge
+      if (f.x < 3) { f.x = 3; f.dir = Math.PI - f.dir; }
+      else if (f.x > BW - 3) { f.x = BW - 3; f.dir = Math.PI - f.dir; }
+      if (f.y < 5) { f.y = 5; f.dir = -f.dir; }
+      else if (f.y > floorLim) { f.y = floorLim; f.dir = -f.dir; }
 
       f.wig += (4 + f.v * 0.28) * dt * (0.7 + lively * 0.5);
       f.flut += 11 * dt;
@@ -298,23 +294,7 @@
 
   /* ---------- pixel scene ---------- */
   function drawScene(t) {
-    b.fillStyle = "#0a1c44"; b.fillRect(0, 0, BW, 44);
-    b.fillStyle = "#123a86"; b.fillRect(0, 44, BW, 40);
-    b.fillStyle = "#1a4ea6"; b.fillRect(0, 84, BW, 32);
-    b.fillStyle = "#245fc0"; b.fillRect(0, 116, BW, FLOOR - 116);
-
-    if (raysOn) {
-      b.globalAlpha = 0.09;
-      b.fillStyle = "#bcd8ff";
-      for (var r = 0; r < RAYS.length; r++) {
-        var ry = RAYS[r];
-        var baseX = ((ry.x + t * 0.000012) % 1) * BW + Math.sin(t * 0.0005 + ry.p) * 4;
-        for (var y = 0; y < FLOOR; y += 2) {
-          b.fillRect(Math.round(baseX + y * 0.55), y, 3, 2);
-        }
-      }
-      b.globalAlpha = 1;
-    }
+    b.fillStyle = "#123a86"; b.fillRect(0, 0, BW, FLOOR);
 
     for (var w = 0; w < WEED.length; w++) if (!WEED[w].front) drawWeed(WEED[w], t);
 
@@ -468,9 +448,9 @@
       var stepY = Math.max(2, Math.round(SCALE * 0.6));
       for (var y = 0; y < cv.height; y += stepY) ctx.fillRect(0, y, cv.width, 1);
     }
-    var vg = ctx.createRadialGradient(cv.width / 2, cv.height / 2, cv.height * 0.25, cv.width / 2, cv.height / 2, cv.height * 0.8);
+    var vg = ctx.createRadialGradient(cv.width / 2, cv.height / 2, cv.height * 0.55, cv.width / 2, cv.height / 2, cv.height * 0.95);
     vg.addColorStop(0, "rgba(0,0,0,0)");
-    vg.addColorStop(1, "rgba(0,0,12,0.55)");
+    vg.addColorStop(1, "rgba(0,0,12,0.22)");
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, cv.width, cv.height);
 
@@ -516,7 +496,6 @@
     $("pace-val").textContent = pace;
   });
   $("bubbles").addEventListener("change", function () { bubblesOn = $("bubbles").checked; });
-  $("rays").addEventListener("change", function () { raysOn = $("rays").checked; });
   $("scan").addEventListener("change", function () { scanOn = $("scan").checked; });
   $("feed").addEventListener("click", function () {
     for (var k = 0; k < 6; k++) {

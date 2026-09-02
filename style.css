@@ -540,7 +540,7 @@ html[data-theme="dark"] .jwt-bad { color: #ef7a7a; }
   display: block;
   width: 100%;
   height: auto;
-  background: #0a1c44;
+  background: #123a86;
   border: 1px solid var(--border);
   border-radius: 0;
   image-rendering: pixelated;
