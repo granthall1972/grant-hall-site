@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EXIF — Grant Hall</title>
+<title>Image Metadata — Grant Hall</title>
 <script>
 (function () {
   try {
@@ -37,14 +37,14 @@
   <div class="wrap">
     <a class="back-link" href="tools.html">&larr; Tools</a>
     <div class="page-head">
-      <h1>EXIF</h1>
-      <p>Read, edit, or strip the metadata in a JPEG. Runs in the browser.</p>
+      <h1>Image Metadata</h1>
+      <p>Read, edit, or strip the metadata in an image. Runs in the browser.</p>
     </div>
 
     <div class="tool">
       <div class="tool-row">
-        <span>JPEG file</span>
-        <input type="file" id="file" class="tool-input-file" accept="image/jpeg,.jpg,.jpeg">
+        <span>Image file</span>
+        <input type="file" id="file" class="tool-input-file" accept="image/*">
       </div>
       <div id="msg" class="tool-msg"></div>
 
@@ -54,46 +54,66 @@
 
         <div id="gps" class="exif-gps" hidden></div>
 
-        <div class="tool-row"><span>Edit fields (blank removes the tag)</span></div>
-        <div class="tool-row"><span>Description</span><input type="text" id="f-desc" class="tool-field" spellcheck="false" autocomplete="off"></div>
-        <div class="tool-row"><span>Artist</span><input type="text" id="f-artist" class="tool-field" spellcheck="false" autocomplete="off"></div>
-        <div class="tool-row"><span>Copyright</span><input type="text" id="f-copy" class="tool-field" spellcheck="false" autocomplete="off"></div>
-        <div class="tool-row"><span>Software</span><input type="text" id="f-soft" class="tool-field" spellcheck="false" autocomplete="off"></div>
-        <div class="tool-row"><span>Camera make</span><input type="text" id="f-make" class="tool-field" spellcheck="false" autocomplete="off"></div>
-        <div class="tool-row"><span>Camera model</span><input type="text" id="f-model" class="tool-field" spellcheck="false" autocomplete="off"></div>
-        <div class="tool-row"><span>Lens</span><input type="text" id="f-lens" class="tool-field" spellcheck="false" autocomplete="off"></div>
-        <div class="tool-row"><span>Date taken (YYYY:MM:DD HH:MM:SS)</span><input type="text" id="f-dto" class="tool-field" spellcheck="false" autocomplete="off"></div>
-        <div class="tool-row">
-          <span>Orientation</span>
-          <select id="f-orient" class="tool-select">
-            <option value="">keep</option>
-            <option value="1">1 – normal</option>
-            <option value="2">2 – flip horizontal</option>
-            <option value="3">3 – rotate 180°</option>
-            <option value="4">4 – flip vertical</option>
-            <option value="5">5 – transpose</option>
-            <option value="6">6 – rotate 90° CW</option>
-            <option value="7">7 – transverse</option>
-            <option value="8">8 – rotate 90° CCW</option>
-          </select>
-        </div>
-        <div class="tool-row"><span>GPS latitude (decimal)</span><input type="text" id="f-lat" class="tool-field" spellcheck="false" autocomplete="off" placeholder="e.g. 45.5231"></div>
-        <div class="tool-row"><span>GPS longitude (decimal)</span><input type="text" id="f-lng" class="tool-field" spellcheck="false" autocomplete="off" placeholder="e.g. -122.6765"></div>
-        <label class="tool-check"><input type="checkbox" id="f-nogps"> remove all GPS tags on export</label>
-
         <div class="tool-actions">
-          <button type="button" id="dl-edit" class="tool-btn">Download with edits</button>
-          <button type="button" id="dl-strip" class="tool-btn sub">Download stripped</button>
+          <button type="button" id="dl-strip" class="tool-btn" hidden>Strip (lossless)</button>
+          <button type="button" id="dl-reenc" class="tool-btn sub">Strip by re-encoding &rarr; PNG</button>
           <button type="button" id="copy" class="tool-btn sub">copy metadata</button>
         </div>
         <div id="msg2" class="tool-msg"></div>
+
+        <!-- JPEG structured edit -->
+        <div id="edit-jpeg" hidden>
+          <div class="tool-row"><span>Edit EXIF (blank removes the tag)</span></div>
+          <div class="tool-row"><span>Description</span><input type="text" id="j-desc" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <div class="tool-row"><span>Artist</span><input type="text" id="j-artist" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <div class="tool-row"><span>Copyright</span><input type="text" id="j-copy" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <div class="tool-row"><span>Software</span><input type="text" id="j-soft" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <div class="tool-row"><span>Camera make</span><input type="text" id="j-make" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <div class="tool-row"><span>Camera model</span><input type="text" id="j-model" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <div class="tool-row"><span>Lens</span><input type="text" id="j-lens" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <div class="tool-row"><span>Date taken (YYYY:MM:DD HH:MM:SS)</span><input type="text" id="j-dto" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <div class="tool-row">
+            <span>Orientation</span>
+            <select id="j-orient" class="tool-select">
+              <option value="">keep</option>
+              <option value="1">1 &ndash; normal</option>
+              <option value="2">2 &ndash; flip horizontal</option>
+              <option value="3">3 &ndash; rotate 180&deg;</option>
+              <option value="4">4 &ndash; flip vertical</option>
+              <option value="5">5 &ndash; transpose</option>
+              <option value="6">6 &ndash; rotate 90&deg; CW</option>
+              <option value="7">7 &ndash; transverse</option>
+              <option value="8">8 &ndash; rotate 90&deg; CCW</option>
+            </select>
+          </div>
+          <div class="tool-row"><span>GPS latitude (decimal)</span><input type="text" id="j-lat" class="tool-field" spellcheck="false" autocomplete="off" placeholder="e.g. 45.5231"></div>
+          <div class="tool-row"><span>GPS longitude (decimal)</span><input type="text" id="j-lng" class="tool-field" spellcheck="false" autocomplete="off" placeholder="e.g. -122.6765"></div>
+          <label class="tool-check"><input type="checkbox" id="j-nogps"> remove all GPS tags on export</label>
+          <div class="tool-actions"><button type="button" id="dl-jpeg" class="tool-btn">Download with edits</button></div>
+        </div>
+
+        <!-- PNG text edit -->
+        <div id="edit-png" hidden>
+          <div class="tool-row"><span>Edit PNG text (blank removes it)</span></div>
+          <div class="tool-row"><span>Title</span><input type="text" id="p-Title" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <div class="tool-row"><span>Author</span><input type="text" id="p-Author" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <div class="tool-row"><span>Description</span><input type="text" id="p-Description" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <div class="tool-row"><span>Copyright</span><input type="text" id="p-Copyright" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <div class="tool-row"><span>Software</span><input type="text" id="p-Software" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <div class="tool-row"><span>Source</span><input type="text" id="p-Source" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <div class="tool-row"><span>Comment</span><input type="text" id="p-Comment" class="tool-field" spellcheck="false" autocomplete="off"></div>
+          <label class="tool-check"><input type="checkbox" id="p-noexif"> also drop the embedded EXIF chunk</label>
+          <div class="tool-actions"><button type="button" id="dl-png" class="tool-btn">Download with edits</button></div>
+        </div>
+
+        <div id="editnote" class="tool-note" hidden></div>
 
         <div id="thumb" class="exif-thumb" hidden></div>
         <div class="tool-row"><span>All metadata</span></div>
         <div class="jwt-claims" id="dump"></div>
       </div>
 
-      <p class="tool-note">The file never leaves your browser. EXIF read/edit/strip here is JPEG only; it uses the <b>piexifjs</b> library, vendored on this site. "Stripped" removes the whole EXIF block. Editing rewrites it, keeping any tags you don't touch.</p>
+      <p class="tool-note">The file never leaves your browser. Lossless strip/edit is supported for JPEG (EXIF), PNG (text + EXIF chunk), and WebP (EXIF/XMP). For any other type, or as a catch-all, <b>re-encode to PNG</b> drops every trace of metadata (it rasterizes, so animation and the original codec are lost). EXIF parsing uses the vendored <b>piexifjs</b>.</p>
     </div>
   </div>
 </main>
@@ -113,29 +133,69 @@
 <script defer>
 window.addEventListener("DOMContentLoaded", function () {
   var $ = function (id) { return document.getElementById(id); };
+  var piexif = window.piexif;
 
-  var IFDS = ["0th", "Exif", "GPS", "Interop", "1st"];
-  var state = { name: "image.jpg", dataUrl: null, exif: null };
+  var state = { name: "image", type: "other", u8: null, exif: null, pngChunks: null, text: [] };
 
-  // tag id -> [ifd, id]
-  var FIELDS = {
-    "f-desc":  ["0th", 270],
-    "f-make":  ["0th", 271],
-    "f-model": ["0th", 272],
-    "f-soft":  ["0th", 305],
-    "f-artist":["0th", 315],
-    "f-copy":  ["0th", 33432],
-    "f-lens":  ["Exif", 42036],
-    "f-dto":   ["Exif", 36867]
-  };
-
+  /* ---------- small helpers ---------- */
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) {
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
     });
   }
   function clean(s) { return String(s).replace(/\u0000+$/, ""); }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function latin1(u8) { var s = ""; for (var i = 0; i < u8.length; i++) s += String.fromCharCode(u8[i]); return s; }
+  function utf8(u8) { try { return new TextDecoder().decode(u8); } catch (e) { return latin1(u8); } }
+  function u32be(v) { return new Uint8Array([(v >>> 24) & 255, (v >>> 16) & 255, (v >>> 8) & 255, v & 255]); }
+  function rd32be(u8, p) { return ((u8[p] << 24) | (u8[p + 1] << 16) | (u8[p + 2] << 8) | u8[p + 3]) >>> 0; }
+  function rd32le(u8, p) { return (u8[p] | (u8[p + 1] << 8) | (u8[p + 2] << 16) | (u8[p + 3] << 24)) >>> 0; }
+  function wr32le(u8, p, v) { u8[p] = v & 255; u8[p + 1] = (v >>> 8) & 255; u8[p + 2] = (v >>> 16) & 255; u8[p + 3] = (v >>> 24) & 255; }
 
+  var CRC_T;
+  function crc32(u8) {
+    if (!CRC_T) {
+      CRC_T = new Uint32Array(256);
+      for (var n = 0; n < 256; n++) {
+        var c = n;
+        for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+        CRC_T[n] = c >>> 0;
+      }
+    }
+    var crc = 0xFFFFFFFF;
+    for (var i = 0; i < u8.length; i++) crc = CRC_T[(crc ^ u8[i]) & 0xFF] ^ (crc >>> 8);
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+
+  async function inflate(u8) {
+    if (typeof DecompressionStream === "undefined") throw new Error("no DecompressionStream");
+    var s = new Blob([u8]).stream().pipeThrough(new DecompressionStream("deflate"));
+    return new Uint8Array(await new Response(s).arrayBuffer());
+  }
+
+  function detect(b) {
+    if (b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF) return "jpeg";
+    if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47) return "png";
+    if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46) return "gif";
+    if (b[0] === 0x42 && b[1] === 0x4D) return "bmp";
+    if ((b[0] === 0x49 && b[1] === 0x49 && b[2] === 0x2A && b[3] === 0x00) ||
+        (b[0] === 0x4D && b[1] === 0x4D && b[2] === 0x00 && b[3] === 0x2A)) return "tiff";
+    if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+        b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return "webp";
+    if (b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) {
+      var brand = latin1(b.subarray(8, 12));
+      if (/heic|heix|hevc|hevx|mif1|msf1/.test(brand)) return "heic";
+      if (/avif|avis/.test(brand)) return "avif";
+      return "isobmff";
+    }
+    return "other";
+  }
+
+  /* ---------- EXIF (via piexif) ---------- */
+  function exifFromTiff(u8) {
+    try { return piexif.load("Exif\x00\x00" + latin1(u8)); }
+    catch (e) { return null; }
+  }
   function fmt(v) {
     if (typeof v === "string") return clean(v);
     if (typeof v === "number") return String(v);
@@ -144,210 +204,409 @@ window.addEventListener("DOMContentLoaded", function () {
         return v.map(function (p) { return p[1] ? p[0] + "/" + p[1] : String(p[0]); }).join(", ");
       }
       if (v.length === 2 && typeof v[0] === "number" && typeof v[1] === "number") {
-        var r = v[1] ? " (" + String(+(v[0] / v[1]).toFixed(6)) + ")" : "";
-        return v[0] + "/" + v[1] + r;
+        return v[0] + "/" + v[1] + (v[1] ? " (" + String(+(v[0] / v[1]).toFixed(6)) + ")" : "");
       }
       return v.join(", ");
     }
     return String(v);
   }
-
   function tagName(ifd, id) {
-    var t = window.piexif.TAGS[ifd] && window.piexif.TAGS[ifd][id];
+    var t = piexif.TAGS[ifd] && piexif.TAGS[ifd][id];
     return t && t.name ? t.name : "Tag " + id;
   }
-
   function decodeGps(gps) {
     try {
-      if (!(2 in gps) || !(4 in gps)) return null;
-      var lat = window.piexif.GPSHelper.dmsRationalToDeg(gps[2], gps[1] || "N");
-      var lng = window.piexif.GPSHelper.dmsRationalToDeg(gps[4], gps[3] || "E");
-      if (isNaN(lat) || isNaN(lng)) return null;
-      return { lat: lat, lng: lng };
+      if (!gps || !(2 in gps) || !(4 in gps)) return null;
+      var lat = piexif.GPSHelper.dmsRationalToDeg(gps[2], gps[1] || "N");
+      var lng = piexif.GPSHelper.dmsRationalToDeg(gps[4], gps[3] || "E");
+      return (isNaN(lat) || isNaN(lng)) ? null : { lat: lat, lng: lng };
     } catch (e) { return null; }
   }
 
+  /* ---------- PNG ---------- */
+  function pngRead(u8) {
+    var out = [], p = 8;
+    while (p + 8 <= u8.length) {
+      var len = rd32be(u8, p);
+      var type = latin1(u8.subarray(p + 4, p + 8));
+      out.push({ type: type, data: u8.slice(p + 8, p + 8 + len) });
+      p += 12 + len;
+      if (type === "IEND") break;
+    }
+    return out;
+  }
+  function pngBuild(chunks) {
+    var parts = [new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10])];
+    chunks.forEach(function (ch) {
+      var tb = new Uint8Array(4);
+      for (var i = 0; i < 4; i++) tb[i] = ch.type.charCodeAt(i);
+      var crcIn = new Uint8Array(4 + ch.data.length);
+      crcIn.set(tb, 0); crcIn.set(ch.data, 4);
+      parts.push(u32be(ch.data.length), tb, ch.data, u32be(crc32(crcIn)));
+    });
+    return new Blob(parts, { type: "image/png" });
+  }
+  var PNG_KEEP = { IHDR: 1, PLTE: 1, tRNS: 1, IDAT: 1, IEND: 1, gAMA: 1, cHRM: 1, sRGB: 1, iCCP: 1, pHYs: 1, sBIT: 1, bKGD: 1, hIST: 1, acTL: 1, fcTL: 1, fdAT: 1 };
+  function pngTextChunk(keyword, text) {
+    var kw = latin1ToBytes(keyword), tx = new TextEncoder().encode(text);
+    var d = new Uint8Array(kw.length + 1 + tx.length);
+    d.set(kw, 0); d[kw.length] = 0; d.set(tx, kw.length + 1);
+    return { type: "tEXt", data: d };
+  }
+  function latin1ToBytes(s) { var u = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) u[i] = s.charCodeAt(i) & 255; return u; }
+
+  async function pngExtract(chunks) {
+    var items = [], jobs = [];
+    for (var i = 0; i < chunks.length; i++) {
+      var ch = chunks[i], d = ch.data, z;
+      if (ch.type === "tEXt") {
+        z = d.indexOf(0);
+        items.push({ k: latin1(d.subarray(0, z)), v: latin1(d.subarray(z + 1)) });
+      } else if (ch.type === "zTXt") {
+        z = d.indexOf(0);
+        (function (kw, comp) {
+          jobs.push(inflate(comp).then(function (o) { return { k: kw, v: utf8(o) }; })
+            .catch(function () { return { k: kw, v: "[compressed]" }; }));
+        })(latin1(d.subarray(0, z)), d.subarray(z + 2));
+      } else if (ch.type === "iTXt") {
+        z = d.indexOf(0);
+        var cflag = d[z + 1];
+        var l1 = d.indexOf(0, z + 3);
+        var l2 = d.indexOf(0, l1 + 1);
+        var kw2 = latin1(d.subarray(0, z));
+        var body = d.subarray(l2 + 1);
+        if (cflag === 1) {
+          (function (kw, comp) {
+            jobs.push(inflate(comp).then(function (o) { return { k: kw, v: utf8(o) }; })
+              .catch(function () { return { k: kw, v: "[compressed]" }; }));
+          })(kw2, body);
+        } else {
+          items.push({ k: kw2, v: utf8(body) });
+        }
+      } else if (ch.type === "tIME") {
+        items.push({ k: "PNG time", v: ((d[0] << 8) | d[1]) + ":" + pad(d[2]) + ":" + pad(d[3]) + " " + pad(d[4]) + ":" + pad(d[5]) + ":" + pad(d[6]) });
+      } else if (ch.type === "eXIf") {
+        state.exif = exifFromTiff(d);
+      }
+    }
+    var more = await Promise.all(jobs);
+    return items.concat(more);
+  }
+
+  /* ---------- WebP ---------- */
+  function webpRead(u8) {
+    var out = [], p = 12;
+    while (p + 8 <= u8.length) {
+      var fourcc = latin1(u8.subarray(p, p + 4));
+      var size = rd32le(u8, p + 4);
+      out.push({ fourcc: fourcc, data: u8.slice(p + 8, p + 8 + size) });
+      p += 8 + size + (size & 1);
+    }
+    return out;
+  }
+  function webpBuild(chunks) {
+    var total = 4;
+    chunks.forEach(function (ch) { total += 8 + ch.data.length + (ch.data.length & 1); });
+    var head = new Uint8Array(12);
+    head.set([0x52, 0x49, 0x46, 0x46], 0); wr32le(head, 4, total); head.set([0x57, 0x45, 0x42, 0x50], 8);
+    var parts = [head];
+    chunks.forEach(function (ch) {
+      var h = new Uint8Array(8);
+      for (var i = 0; i < 4; i++) h[i] = ch.fourcc.charCodeAt(i);
+      wr32le(h, 4, ch.data.length);
+      parts.push(h, ch.data);
+      if (ch.data.length & 1) parts.push(new Uint8Array([0]));
+    });
+    return new Blob(parts, { type: "image/webp" });
+  }
+
+  /* ---------- GIF ---------- */
+  function gifComments(u8) {
+    var out = [], i = 0;
+    while (i < u8.length - 1) {
+      if (u8[i] === 0x21 && u8[i + 1] === 0xFE) {
+        i += 2; var s = "";
+        while (i < u8.length && u8[i] !== 0) { var n = u8[i++]; s += utf8(u8.subarray(i, i + n)); i += n; }
+        out.push({ k: "GIF comment", v: s });
+      } else i++;
+    }
+    return out;
+  }
+
+  /* ---------- render ---------- */
   function renderDump() {
     var html = "";
-    IFDS.forEach(function (ifd) {
-      var d = state.exif[ifd];
+    ["0th", "Exif", "GPS", "Interop", "1st"].forEach(function (ifd) {
+      var d = state.exif && state.exif[ifd];
       if (!d || !Object.keys(d).length) return;
-      html += "<div><b>[" + ifd + "]</b></div>";
+      html += "<div><b>[EXIF " + ifd + "]</b></div>";
       Object.keys(d).forEach(function (id) {
         html += "<div>&nbsp;&nbsp;" + esc(tagName(ifd, id)) + " &nbsp; " + esc(fmt(d[id])) + "</div>";
       });
     });
-    $("dump").innerHTML = html || "<div>No EXIF metadata found.</div>";
+    if (state.text.length) {
+      html += "<div><b>[text / XMP]</b></div>";
+      state.text.forEach(function (it) {
+        var v = it.v.length > 600 ? it.v.slice(0, 600) + "\u2026" : it.v;
+        html += "<div>&nbsp;&nbsp;" + esc(it.k) + " &nbsp; " + esc(v) + "</div>";
+      });
+    }
+    $("dump").innerHTML = html || "<div>No metadata found.</div>";
   }
-
   function renderGps() {
-    var g = decodeGps(state.exif.GPS || {});
-    if (!g) { $("gps").hidden = true; $("f-lat").value = ""; $("f-lng").value = ""; return; }
+    var g = decodeGps(state.exif && state.exif.GPS);
+    if (!g) { $("gps").hidden = true; if ($("j-lat")) { $("j-lat").value = ""; $("j-lng").value = ""; } return; }
     var la = +g.lat.toFixed(6), lo = +g.lng.toFixed(6);
-    $("f-lat").value = la;
-    $("f-lng").value = lo;
+    if ($("j-lat")) { $("j-lat").value = la; $("j-lng").value = lo; }
     $("gps").hidden = false;
     $("gps").innerHTML = "<b>GPS:</b> " + la + ", " + lo +
       ' &nbsp; <a href="https://www.openstreetmap.org/?mlat=' + la + "&mlon=" + lo +
       "#map=13/" + la + "/" + lo + '" target="_blank" rel="noopener">map</a>' +
-      " &nbsp; This photo carries your location. Use \u201cremove all GPS tags\u201d or strip.";
+      " &nbsp; This image carries a location. Strip it or remove the GPS tags.";
   }
-
   function renderThumb() {
-    var t = state.exif.thumbnail;
+    var t = state.exif && state.exif.thumbnail;
     if (!t) { $("thumb").hidden = true; return; }
     try {
-      var b64 = btoa(t);
       $("thumb").hidden = false;
       $("thumb").innerHTML = '<div class="tool-row"><span>Embedded thumbnail</span></div>' +
-        '<img class="exif-img" alt="thumbnail" src="data:image/jpeg;base64,' + b64 + '">';
+        '<img class="exif-img" alt="thumbnail" src="data:image/jpeg;base64,' + btoa(t) + '">';
     } catch (e) { $("thumb").hidden = true; }
   }
+  function textOut() {
+    var lines = [];
+    ["0th", "Exif", "GPS", "Interop", "1st"].forEach(function (ifd) {
+      var d = state.exif && state.exif[ifd];
+      if (!d || !Object.keys(d).length) return;
+      lines.push("[EXIF " + ifd + "]");
+      Object.keys(d).forEach(function (id) { lines.push("  " + tagName(ifd, id) + ": " + fmt(d[id])); });
+    });
+    state.text.forEach(function (it) { lines.push(it.k + ": " + it.v); });
+    return lines.join("\n") || "No metadata.";
+  }
 
-  function prefill() {
-    Object.keys(FIELDS).forEach(function (fid) {
-      var ref = FIELDS[fid], v = state.exif[ref[0]] && state.exif[ref[0]][ref[1]];
+  /* ---------- edit: JPEG ---------- */
+  var JF = { "j-desc": ["0th", 270], "j-make": ["0th", 271], "j-model": ["0th", 272], "j-soft": ["0th", 305], "j-artist": ["0th", 315], "j-copy": ["0th", 33432], "j-lens": ["Exif", 42036], "j-dto": ["Exif", 36867] };
+  function jpegPrefill() {
+    Object.keys(JF).forEach(function (fid) {
+      var r = JF[fid], v = state.exif[r[0]] && state.exif[r[0]][r[1]];
       $(fid).value = (v === undefined || v === null) ? "" : clean(v);
     });
     var o = state.exif["0th"] && state.exif["0th"][274];
-    $("f-orient").value = (o >= 1 && o <= 8) ? String(o) : "";
-    $("f-nogps").checked = false;
+    $("j-orient").value = (o >= 1 && o <= 8) ? String(o) : "";
+    $("j-nogps").checked = false;
   }
-
-  function textOut() {
-    var lines = [];
-    IFDS.forEach(function (ifd) {
-      var d = state.exif[ifd];
-      if (!d || !Object.keys(d).length) return;
-      lines.push("[" + ifd + "]");
-      Object.keys(d).forEach(function (id) {
-        lines.push("  " + tagName(ifd, id) + ": " + fmt(d[id]));
-      });
+  function jpegApply(exif) {
+    Object.keys(JF).forEach(function (fid) {
+      var r = JF[fid], v = $(fid).value.trim();
+      if (!exif[r[0]]) exif[r[0]] = {};
+      if (v === "") delete exif[r[0]][r[1]]; else exif[r[0]][r[1]] = v;
     });
-    return lines.join("\n") || "No EXIF metadata.";
-  }
-
-  function load(file) {
-    $("msg").className = "tool-msg";
-    $("msg").textContent = "Reading\u2026";
-    $("msg2").textContent = "";
-    var isJpeg = /jpe?g$/i.test(file.name) || file.type === "image/jpeg";
-    var reader = new FileReader();
-    reader.onload = function () {
-      state.name = file.name || "image.jpg";
-      state.dataUrl = reader.result;
-      $("preview").src = state.dataUrl;
-      var img = new Image();
-      img.onload = function () {
-        $("fileinfo").innerHTML = "<span>File</span>" + esc(state.name) + " &middot; " +
-          img.naturalWidth + "\u00d7" + img.naturalHeight + " &middot; " + Math.round(file.size / 1024) + " KB";
-      };
-      img.src = state.dataUrl;
-
-      if (!isJpeg) {
-        $("msg").className = "tool-msg jwt-bad";
-        $("msg").textContent = "That is not a JPEG. Preview only; EXIF tools are JPEG only.";
-        state.exif = null;
-        $("loaded").hidden = true;
-        return;
-      }
-      try {
-        state.exif = window.piexif.load(state.dataUrl);
-      } catch (e) {
-        $("msg").className = "tool-msg jwt-bad";
-        $("msg").textContent = "Couldn't parse EXIF: " + (e && e.message ? e.message : e);
-        return;
-      }
-      $("msg").textContent = "";
-      $("loaded").hidden = false;
-      prefill();
-      renderGps();
-      renderThumb();
-      renderDump();
-    };
-    reader.readAsDataURL(file);
-  }
-
-  function applyEdits(exif) {
-    Object.keys(FIELDS).forEach(function (fid) {
-      var ref = FIELDS[fid], v = $(fid).value.trim();
-      if (!exif[ref[0]]) exif[ref[0]] = {};
-      if (v === "") delete exif[ref[0]][ref[1]];
-      else exif[ref[0]][ref[1]] = v;
-    });
-    var o = $("f-orient").value;
-    if (o) { if (!exif["0th"]) exif["0th"] = {}; exif["0th"][274] = parseInt(o, 10); }
-
-    if ($("f-nogps").checked) {
-      exif.GPS = {};
-    } else {
-      var lat = parseFloat($("f-lat").value), lng = parseFloat($("f-lng").value);
+    var o = $("j-orient").value;
+    if (o) { exif["0th"] = exif["0th"] || {}; exif["0th"][274] = parseInt(o, 10); }
+    if ($("j-nogps").checked) { exif.GPS = {}; }
+    else {
+      var lat = parseFloat($("j-lat").value), lng = parseFloat($("j-lng").value);
       if (!isNaN(lat) && !isNaN(lng)) {
-        var G = window.piexif.GPSHelper;
+        var G = piexif.GPSHelper;
         exif.GPS = exif.GPS || {};
         exif.GPS[0] = [2, 3, 0, 0];
-        exif.GPS[1] = lat < 0 ? "S" : "N";
-        exif.GPS[2] = G.degToDmsRational(Math.abs(lat));
-        exif.GPS[3] = lng < 0 ? "W" : "E";
-        exif.GPS[4] = G.degToDmsRational(Math.abs(lng));
+        exif.GPS[1] = lat < 0 ? "S" : "N"; exif.GPS[2] = G.degToDmsRational(Math.abs(lat));
+        exif.GPS[3] = lng < 0 ? "W" : "E"; exif.GPS[4] = G.degToDmsRational(Math.abs(lng));
       }
     }
     return exif;
   }
 
-  function dataUrlToBlob(durl) {
-    var parts = durl.split(","), mime = (parts[0].match(/:(.*?);/) || [])[1] || "image/jpeg";
-    var bin = atob(parts[1]), n = bin.length, u8 = new Uint8Array(n);
-    while (n--) u8[n] = bin.charCodeAt(n);
-    return new Blob([u8], { type: mime });
+  /* ---------- edit: PNG ---------- */
+  var PNG_KEYS = ["Title", "Author", "Description", "Copyright", "Software", "Source", "Comment"];
+  function pngPrefill() {
+    var byKey = {};
+    state.text.forEach(function (it) { if (byKey[it.k] === undefined) byKey[it.k] = it.v; });
+    PNG_KEYS.forEach(function (k) { $("p-" + k).value = byKey[k] || ""; });
+    $("p-noexif").checked = false;
   }
-  function download(durl, suffix) {
-    var base = state.name.replace(/\.jpe?g$/i, "");
+
+  /* ---------- download ---------- */
+  function save(blob, suffix, ext) {
+    var base = state.name.replace(/\.[^.]+$/, "");
     var a = document.createElement("a");
-    a.href = URL.createObjectURL(dataUrlToBlob(durl));
-    a.download = base + suffix + ".jpg";
-    document.body.appendChild(a);
-    a.click();
+    a.href = URL.createObjectURL(blob);
+    a.download = base + suffix + "." + ext;
+    document.body.appendChild(a); a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
   }
+  function binToU8(bin) {
+    var n = bin.length, u = new Uint8Array(n);
+    for (var i = 0; i < n; i++) u[i] = bin.charCodeAt(i) & 255;
+    return u;
+  }
+  function binToBlob(bin, mime) { return new Blob([binToU8(bin)], { type: mime }); }
+  async function reencode() {
+    var blob = new Blob([state.u8]);
+    var bmp;
+    try { bmp = await createImageBitmap(blob, { imageOrientation: "from-image" }); }
+    catch (e) {
+      bmp = await new Promise(function (res, rej) {
+        var im = new Image();
+        im.onload = function () { res(im); };
+        im.onerror = function () { rej(new Error("decode failed")); };
+        im.src = URL.createObjectURL(blob);
+      });
+    }
+    var c = document.createElement("canvas");
+    c.width = bmp.width || bmp.naturalWidth;
+    c.height = bmp.height || bmp.naturalHeight;
+    c.getContext("2d").drawImage(bmp, 0, 0);
+    return await new Promise(function (res) { c.toBlob(res, "image/png"); });
+  }
 
+  /* ---------- load ---------- */
+  async function load(file) {
+    $("msg").className = "tool-msg";
+    $("msg").textContent = "Reading\u2026";
+    $("msg2").textContent = "";
+    state = { name: file.name || "image", type: "other", u8: null, exif: null, pngChunks: null, text: [] };
+    var buf = await file.arrayBuffer();
+    state.u8 = new Uint8Array(buf);
+    state.type = detect(state.u8);
+
+    var url = URL.createObjectURL(file);
+    $("preview").src = url;
+    var im = new Image();
+    im.onload = function () {
+      $("fileinfo").innerHTML = "<span>File</span>" + esc(state.name) + " &middot; " + state.type.toUpperCase() +
+        " &middot; " + im.naturalWidth + "\u00d7" + im.naturalHeight + " &middot; " + Math.round(file.size / 1024) + " KB";
+    };
+    im.src = url;
+
+    try {
+      if (state.type === "jpeg") {
+        state.exif = piexif.load(latin1(state.u8));
+      } else if (state.type === "png") {
+        state.pngChunks = pngRead(state.u8);
+        state.text = await pngExtract(state.pngChunks);
+      } else if (state.type === "webp") {
+        webpRead(state.u8).forEach(function (ch) {
+          if (ch.fourcc === "EXIF") state.exif = exifFromTiff(ch.data);
+          else if (ch.fourcc === "XMP ") state.text.push({ k: "XMP", v: utf8(ch.data) });
+          else if (ch.fourcc === "ICCP") state.text.push({ k: "ICC profile", v: "(" + ch.data.length + " bytes)" });
+        });
+      } else if (state.type === "tiff") {
+        state.exif = exifFromTiff(state.u8);
+      } else if (state.type === "gif") {
+        state.text = gifComments(state.u8);
+      }
+    } catch (e) {
+      $("msg").textContent = "Metadata parse warning: " + (e && e.message ? e.message : e);
+    }
+
+    // buttons / edit panels by type
+    var lossless = state.type === "jpeg" || state.type === "png" || state.type === "webp";
+    $("dl-strip").hidden = !lossless;
+    $("edit-jpeg").hidden = state.type !== "jpeg";
+    $("edit-png").hidden = state.type !== "png";
+    var en = $("editnote");
+    if (state.type === "webp") { en.hidden = false; en.textContent = "WebP: EXIF/XMP can be stripped losslessly but not edited here. Re-encode to change pixels."; }
+    else if (["gif", "tiff", "bmp", "heic", "avif", "isobmff", "other"].indexOf(state.type) > -1) {
+      en.hidden = false;
+      en.textContent = state.type.toUpperCase() + ": read + strip-by-re-encode only; no in-place editor for this format.";
+    } else en.hidden = true;
+
+    if (state.type === "jpeg" && state.exif) jpegPrefill();
+    if (state.type === "png") pngPrefill();
+
+    if ($("msg").textContent === "Reading\u2026") $("msg").textContent = "";
+    $("loaded").hidden = false;
+    renderGps(); renderThumb(); renderDump();
+  }
+
+  /* ---------- wire up ---------- */
   $("file").addEventListener("change", function () {
     var f = $("file").files[0];
-    if (f) load(f);
+    if (f) load(f).catch(function (e) {
+      $("msg").className = "tool-msg jwt-bad";
+      $("msg").textContent = "Couldn't read that file: " + (e && e.message ? e.message : e);
+    });
   });
 
-  $("dl-edit").addEventListener("click", function () {
+  $("dl-strip").addEventListener("click", function () {
+    try {
+      if (state.type === "jpeg") {
+        save(binToBlob(piexif.remove(latin1(state.u8)), "image/jpeg"), "-stripped", "jpg");
+      } else if (state.type === "png") {
+        save(pngBuild(state.pngChunks.filter(function (c) { return PNG_KEEP[c.type]; })), "-stripped", "png");
+      } else if (state.type === "webp") {
+        var keep = webpRead(state.u8).filter(function (c) { return ["EXIF", "XMP ", "ICCP"].indexOf(c.fourcc) === -1; });
+        keep.forEach(function (c) { if (c.fourcc === "VP8X") c.data[0] &= ~((1 << 5) | (1 << 3) | (1 << 2)); });
+        save(webpBuild(keep), "-stripped", "webp");
+      }
+      $("msg2").className = "tool-msg";
+      $("msg2").textContent = "Stripped losslessly (pixels untouched).";
+    } catch (e) {
+      $("msg2").className = "tool-msg jwt-bad";
+      $("msg2").textContent = "Strip failed: " + (e && e.message ? e.message : e);
+    }
+  });
+
+  $("dl-reenc").addEventListener("click", async function () {
+    $("msg2").className = "tool-msg";
+    $("msg2").textContent = "Re-encoding\u2026";
+    try {
+      save(await reencode(), "-clean", "png");
+      $("msg2").textContent = "Re-encoded to a metadata-free PNG.";
+    } catch (e) {
+      $("msg2").className = "tool-msg jwt-bad";
+      $("msg2").textContent = "Re-encode failed (browser can't decode this type): " + (e && e.message ? e.message : e);
+    }
+  });
+
+  $("dl-jpeg").addEventListener("click", function () {
     if (!state.exif) return;
     $("msg2").className = "tool-msg";
-    var dto = $("f-dto").value.trim();
+    var dto = $("j-dto").value.trim();
     if (dto && !/^\d{4}:\d\d:\d\d \d\d:\d\d:\d\d$/.test(dto)) {
       $("msg2").className = "tool-msg jwt-bad";
       $("msg2").textContent = "Date taken must look like 2026:09:01 14:30:00.";
       return;
     }
-    var working = window.piexif.load(state.dataUrl); // fresh copy of all tags
-    working.thumbnail = state.exif.thumbnail;
+    var jbin = latin1(state.u8);
     try {
-      var bytes = window.piexif.dump(applyEdits(working));
-      var out = window.piexif.insert(bytes, state.dataUrl);
-      download(out, "-edited");
-      state.dataUrl = out;
-      state.exif = window.piexif.load(out);
-      prefill(); renderGps(); renderThumb(); renderDump();
-      $("msg2").textContent = "Saved. The panel below now reflects the edited file; further edits build on it.";
+      var working = piexif.load(jbin);
+      working.thumbnail = state.exif.thumbnail;
+      var out = piexif.insert(piexif.dump(jpegApply(working)), jbin);
+      save(binToBlob(out, "image/jpeg"), "-edited", "jpg");
+      state.u8 = binToU8(out);
+      state.exif = piexif.load(out);
+      jpegPrefill(); renderGps(); renderThumb(); renderDump();
+      $("msg2").textContent = "Saved. The panel now reflects the edited file.";
     } catch (e) {
       $("msg2").className = "tool-msg jwt-bad";
       $("msg2").textContent = "Write failed: " + (e && e.message ? e.message : e);
     }
   });
 
-  $("dl-strip").addEventListener("click", function () {
-    if (!state.dataUrl) return;
+  $("dl-png").addEventListener("click", function () {
+    if (!state.pngChunks) return;
     try {
-      download(window.piexif.remove(state.dataUrl), "-stripped");
+      var drop = { tEXt: 1, iTXt: 1, zTXt: 1, tIME: 1 };
+      if ($("p-noexif").checked) drop.eXIf = 1;
+      var kept = state.pngChunks.filter(function (c) { return !drop[c.type]; });
+      var idat = -1;
+      for (var i = 0; i < kept.length; i++) if (kept[i].type === "IEND") { idat = i; break; }
+      if (idat < 0) idat = kept.length;
+      var adds = [];
+      PNG_KEYS.forEach(function (k) {
+        var v = $("p-" + k).value.trim();
+        if (v) adds.push(pngTextChunk(k, v));
+      });
+      kept.splice.apply(kept, [idat, 0].concat(adds));
+      save(pngBuild(kept), "-edited", "png");
+      $("msg2").className = "tool-msg";
+      $("msg2").textContent = "Saved a PNG with your text (pixels untouched).";
     } catch (e) {
       $("msg2").className = "tool-msg jwt-bad";
-      $("msg2").textContent = "Strip failed: " + (e && e.message ? e.message : e);
+      $("msg2").textContent = "Write failed: " + (e && e.message ? e.message : e);
     }
   });
 
