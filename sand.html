@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Falling Sand — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css?v=13">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html">Tools</a>
+      <a href="fun.html" aria-current="page">Fun</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap-wide">
+    <a class="back-link" href="fun.html">&larr; Fun</a>
+    <div class="page-head">
+      <h1>Falling Sand</h1>
+      <p>Draw materials on the box and watch the physics play out. Sand piles, water levels, oil floats, fire spreads, acid eats, plants creep.</p>
+    </div>
+
+    <div class="sand-wrap">
+      <div class="sand-side">
+        <div class="sand-mats" id="mats">
+          <button type="button" class="sand-mat is-active" data-mat="sand">Sand</button>
+          <button type="button" class="sand-mat" data-mat="water">Water</button>
+          <button type="button" class="sand-mat" data-mat="oil">Oil</button>
+          <button type="button" class="sand-mat" data-mat="fire">Fire</button>
+          <button type="button" class="sand-mat" data-mat="wood">Wood</button>
+          <button type="button" class="sand-mat" data-mat="plant">Plant</button>
+          <button type="button" class="sand-mat" data-mat="wall">Wall</button>
+          <button type="button" class="sand-mat" data-mat="ice">Ice</button>
+          <button type="button" class="sand-mat" data-mat="acid">Acid</button>
+          <button type="button" class="sand-mat" data-mat="smoke">Smoke</button>
+          <button type="button" class="sand-mat" data-mat="steam">Steam</button>
+          <button type="button" class="sand-mat" data-mat="spout">Spout</button>
+          <button type="button" class="sand-mat" data-mat="erase">Erase</button>
+        </div>
+
+        <div class="sand-field">
+          <span>Brush <b id="brush-val">3</b></span>
+          <input type="range" id="brush" min="1" max="14" value="3">
+        </div>
+        <div class="sand-field">
+          <span>Speed <b id="speed-val">2</b></span>
+          <input type="range" id="speed" min="1" max="4" value="2">
+        </div>
+
+        <div class="sand-actions">
+          <button type="button" id="pause" class="tool-btn sub">Pause</button>
+          <button type="button" id="clear" class="tool-btn sub">Clear</button>
+        </div>
+      </div>
+
+      <div class="sand-canvas-wrap">
+        <canvas id="cv" width="200" height="132"></canvas>
+      </div>
+    </div>
+
+    <p class="tool-note">Runs entirely in your browser. Drag on the box to draw the selected material. Water puts out fire and makes steam; steam condenses back to water. Oil floats on water and burns. Acid dissolves most things but not walls. Spout drips water. Plant creeps along water; ice melts near fire and slowly freezes water it touches.</p>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js?v=13" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var cv = $("cv"), ctx = cv.getContext("2d");
+  var W = cv.width, H = cv.height, N = W * H;
+
+  var EMPTY = 0, SAND = 1, WATER = 2, OIL = 3, FIRE = 4, WOOD = 5, PLANT = 6,
+      WALL = 7, ICE = 8, ACID = 9, SMOKE = 10, STEAM = 11, SPOUT = 12;
+  var MAT = { sand: SAND, water: WATER, oil: OIL, fire: FIRE, wood: WOOD, plant: PLANT,
+             wall: WALL, ice: ICE, acid: ACID, smoke: SMOKE, steam: STEAM, spout: SPOUT };
+
+  var COL = {};
+  COL[EMPTY] = [15, 17, 21];
+  COL[SAND] = [214, 193, 133];
+  COL[WATER] = [58, 122, 201];
+  COL[OIL] = [44, 37, 26];
+  COL[WOOD] = [120, 82, 48];
+  COL[PLANT] = [63, 163, 77];
+  COL[WALL] = [128, 133, 140];
+  COL[ICE] = [155, 211, 239];
+  COL[ACID] = [176, 214, 40];
+  COL[SMOKE] = [95, 95, 100];
+  COL[STEAM] = [200, 212, 222];
+  COL[SPOUT] = [47, 127, 196];
+  var FIRE_COLS = [[255, 148, 51], [255, 96, 33], [255, 200, 64], [214, 60, 24]];
+
+  var grid = new Uint8Array(N);
+  var aux = new Uint8Array(N);
+  var moved = new Uint8Array(N);
+  var NOISE = new Int8Array(1024);
+  for (var q = 0; q < 1024; q++) NOISE[q] = (Math.random() * 22 | 0) - 11;
+
+  var frame = 0, paused = false, speed = 2, brush = 3, curMat = "sand";
+  var painting = false, lastX = 0, lastY = 0;
+
+  function idx(x, y) { return (x < 0 || y < 0 || x >= W || y >= H) ? -1 : y * W + x; }
+  function isGas(m) { return m === SMOKE || m === STEAM; }
+  function isFluid(m) { return isGas(m) || m === WATER || m === OIL || m === ACID; }
+  function density(m) {
+    if (m === SAND) return 5;
+    if (m === WATER || m === ACID) return 3;
+    if (m === OIL) return 2;
+    if (m === SMOKE || m === STEAM) return 1;
+    return m === EMPTY ? 0 : 99;
+  }
+  function canFall(mover, target) {
+    if (target === EMPTY) return true;
+    return isFluid(target) && density(target) < density(mover);
+  }
+  function setCell(i, m, life) { grid[i] = m; aux[i] = life || 0; moved[i] = 1; }
+  function swap(i, j) {
+    var g = grid[i]; grid[i] = grid[j]; grid[j] = g;
+    var a = aux[i]; aux[i] = aux[j]; aux[j] = a;
+    moved[i] = 1; moved[j] = 1;
+  }
+  function n4(x, y) {
+    var a = [], i;
+    if ((i = idx(x, y - 1)) >= 0) a.push(i);
+    if ((i = idx(x, y + 1)) >= 0) a.push(i);
+    if ((i = idx(x - 1, y)) >= 0) a.push(i);
+    if ((i = idx(x + 1, y)) >= 0) a.push(i);
+    return a;
+  }
+  function ri(a) { return a[(Math.random() * a.length) | 0]; }
+
+  function powder(x, y, i) {
+    var b = idx(x, y + 1);
+    if (b < 0) return;
+    if (canFall(SAND, grid[b])) { swap(i, b); return; }
+    var order = Math.random() < 0.5 ? [-1, 1] : [1, -1];
+    for (var k = 0; k < 2; k++) {
+      var d = idx(x + order[k], y + 1);
+      if (d >= 0 && canFall(SAND, grid[d])) { swap(i, d); return; }
+    }
+  }
+
+  function liquid(x, y, i, m) {
+    if (m === ACID) {
+      var t = ri(n4(x, y)), tm = grid[t];
+      if (tm !== EMPTY && tm !== WALL && tm !== ACID && tm !== SPOUT && !isGas(tm)) {
+        setCell(t, EMPTY, 0);
+        if (Math.random() < 0.18) { setCell(i, EMPTY, 0); return; }
+      }
+    }
+    var b = idx(x, y + 1);
+    if (b >= 0 && canFall(m, grid[b])) { swap(i, b); return; }
+    var order = Math.random() < 0.5 ? [-1, 1] : [1, -1];
+    for (var k = 0; k < 2; k++) {
+      var d = idx(x + order[k], y + 1);
+      if (d >= 0 && canFall(m, grid[d])) { swap(i, d); return; }
+    }
+    for (var k2 = 0; k2 < 2; k2++) {
+      var s = idx(x + order[k2], y);
+      if (s >= 0 && (grid[s] === EMPTY || isGas(grid[s]))) { swap(i, s); return; }
+    }
+  }
+
+  function gas(x, y, i, m) {
+    if (--aux[i] <= 0) { setCell(i, m === STEAM ? WATER : EMPTY, 0); return; }
+    if (m === SMOKE && Math.random() < 0.012) { setCell(i, EMPTY, 0); return; }
+    if (m === STEAM && Math.random() < 0.006) { setCell(i, WATER, 0); return; }
+    var u = idx(x, y - 1);
+    if (u < 0) { if (m === STEAM && Math.random() < 0.06) setCell(i, WATER, 0); return; }
+    var um = grid[u];
+    if (um === EMPTY) { swap(i, u); return; }
+    if (isFluid(um) && !isGas(um)) { swap(i, u); return; }
+    var order = Math.random() < 0.5 ? [-1, 1] : [1, -1];
+    for (var k = 0; k < 2; k++) {
+      var d = idx(x + order[k], y - 1);
+      if (d >= 0 && grid[d] === EMPTY) { swap(i, d); return; }
+    }
+    for (var k2 = 0; k2 < 2; k2++) {
+      var s = idx(x + order[k2], y);
+      if (s >= 0 && grid[s] === EMPTY) { swap(i, s); return; }
+    }
+    if (m === STEAM && Math.random() < 0.03) setCell(i, WATER, 0);
+  }
+
+  function fire(x, y, i) {
+    if (--aux[i] <= 0) { setCell(i, Math.random() < 0.5 ? SMOKE : EMPTY, 90 + (Math.random() * 60 | 0)); return; }
+    var ns = n4(x, y);
+    for (var k = 0; k < ns.length; k++) {
+      var j = ns[k], m = grid[j];
+      if (m === WATER || m === STEAM) {
+        setCell(j, Math.random() < 0.6 ? STEAM : EMPTY, 150 + (Math.random() * 90 | 0));
+        setCell(i, Math.random() < 0.4 ? SMOKE : EMPTY, 90 + (Math.random() * 60 | 0));
+        return;
+      }
+      if (m === OIL && Math.random() < 0.35) setCell(j, FIRE, 30 + (Math.random() * 40 | 0));
+      else if (m === WOOD && Math.random() < 0.05) setCell(j, FIRE, 50 + (Math.random() * 60 | 0));
+      else if (m === PLANT && Math.random() < 0.12) setCell(j, FIRE, 25 + (Math.random() * 30 | 0));
+      else if (m === ICE) setCell(j, WATER, 0);
+    }
+    var u = idx(x, y - 1);
+    if (u >= 0 && grid[u] === EMPTY) {
+      if (Math.random() < 0.06) { setCell(u, SMOKE, 80 + (Math.random() * 60 | 0)); }
+      else if (Math.random() < 0.5) { swap(i, u); return; }
+    } else if (Math.random() < 0.18) {
+      var s = idx(x + (Math.random() < 0.5 ? -1 : 1), y - 1);
+      if (s >= 0 && grid[s] === EMPTY) { swap(i, s); return; }
+    }
+  }
+
+  function plant(x, y, i) {
+    if (Math.random() < 0.02) {
+      var t = ri(n4(x, y));
+      if (grid[t] === WATER) setCell(t, PLANT, 0);
+    }
+  }
+  function ice(x, y, i) {
+    var ns = n4(x, y);
+    for (var k = 0; k < ns.length; k++) if (grid[ns[k]] === FIRE) { setCell(i, WATER, 0); return; }
+    if (Math.random() < 0.01) { var t = ri(ns); if (grid[t] === WATER) setCell(t, ICE, 0); }
+  }
+  function spout(x, y, i) {
+    var b = idx(x, y + 1);
+    if (b >= 0 && grid[b] === EMPTY) setCell(b, WATER, 0);
+  }
+
+  function stepSim() {
+    moved.fill(0);
+    var dir = (frame & 1) ? 1 : -1;
+    for (var y = H - 1; y >= 0; y--) {
+      var xs = dir === 1 ? 0 : W - 1, xe = dir === 1 ? W : -1;
+      for (var x = xs; x !== xe; x += dir) {
+        var i = y * W + x, m = grid[i];
+        if (m === EMPTY || m === WALL || m === WOOD || moved[i]) continue;
+        if (m === SAND) powder(x, y, i);
+        else if (m === WATER || m === OIL || m === ACID) liquid(x, y, i, m);
+        else if (m === SMOKE || m === STEAM) gas(x, y, i, m);
+        else if (m === FIRE) fire(x, y, i);
+        else if (m === PLANT) plant(x, y, i);
+        else if (m === ICE) ice(x, y, i);
+        else if (m === SPOUT) spout(x, y, i);
+      }
+    }
+    frame++;
+  }
+
+  var img = ctx.createImageData(W, H);
+  function render() {
+    var d = img.data;
+    for (var i = 0, p = 0; i < N; i++, p += 4) {
+      var m = grid[i], c;
+      if (m === FIRE) c = FIRE_COLS[(i + frame) & 3];
+      else c = COL[m];
+      var n = m === EMPTY ? 0 : NOISE[i & 1023];
+      d[p] = c[0] + n < 0 ? 0 : c[0] + n > 255 ? 255 : c[0] + n;
+      d[p + 1] = c[1] + n < 0 ? 0 : c[1] + n > 255 ? 255 : c[1] + n;
+      d[p + 2] = c[2] + n < 0 ? 0 : c[2] + n > 255 ? 255 : c[2] + n;
+      d[p + 3] = 255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  function tick() {
+    if (!paused) for (var s = 0; s < speed; s++) stepSim();
+    render();
+    requestAnimationFrame(tick);
+  }
+
+  /* ---- input ---- */
+  function paintAt(cx, cy) {
+    var r = brush, r2 = r * r;
+    for (var dy = -r; dy <= r; dy++) {
+      for (var dx = -r; dx <= r; dx++) {
+        if (dx * dx + dy * dy > r2) continue;
+        var i = idx(cx + dx, cy + dy);
+        if (i < 0) continue;
+        if (curMat === "erase") { grid[i] = EMPTY; aux[i] = 0; continue; }
+        var m = MAT[curMat];
+        grid[i] = m;
+        aux[i] = m === FIRE ? 40 + (Math.random() * 50 | 0)
+          : m === SMOKE ? 70 + (Math.random() * 80 | 0)
+          : m === STEAM ? 150 + (Math.random() * 90 | 0) : 0;
+      }
+    }
+  }
+  function line(x0, y0, x1, y1) {
+    var dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+    var sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1, err = dx - dy;
+    for (;;) {
+      paintAt(x0, y0);
+      if (x0 === x1 && y0 === y1) break;
+      var e2 = 2 * err;
+      if (e2 > -dy) { err -= dy; x0 += sx; }
+      if (e2 < dx) { err += dx; y0 += sy; }
+    }
+  }
+  function cell(e) {
+    var r = cv.getBoundingClientRect();
+    return {
+      x: Math.floor((e.clientX - r.left) / r.width * W),
+      y: Math.floor((e.clientY - r.top) / r.height * H)
+    };
+  }
+  cv.addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    painting = true;
+    cv.setPointerCapture(e.pointerId);
+    var c = cell(e);
+    lastX = c.x; lastY = c.y;
+    paintAt(c.x, c.y);
+  });
+  cv.addEventListener("pointermove", function (e) {
+    if (!painting) return;
+    var c = cell(e);
+    line(lastX, lastY, c.x, c.y);
+    lastX = c.x; lastY = c.y;
+  });
+  window.addEventListener("pointerup", function () { painting = false; });
+
+  /* ---- controls ---- */
+  var matBtns = document.querySelectorAll("#mats .sand-mat");
+  matBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      matBtns.forEach(function (x) { x.classList.toggle("is-active", x === b); });
+      curMat = b.getAttribute("data-mat");
+    });
+  });
+  $("brush").addEventListener("input", function () { brush = parseInt($("brush").value, 10); $("brush-val").textContent = brush; });
+  $("speed").addEventListener("input", function () { speed = parseInt($("speed").value, 10); $("speed-val").textContent = speed; });
+  $("pause").addEventListener("click", function () {
+    paused = !paused;
+    $("pause").textContent = paused ? "Play" : "Pause";
+  });
+  $("clear").addEventListener("click", function () { grid.fill(0); aux.fill(0); });
+
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
