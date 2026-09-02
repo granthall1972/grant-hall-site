@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Thoughts — Grant Hall</title>
+<title>Fun — Grant Hall</title>
 <script>
 (function () {
   try {
@@ -23,8 +23,8 @@
     <a class="logo" href="index.html">Grant Hall</a>
     <nav class="links">
       <a href="tools.html">Tools</a>
-      <a href="fun.html">Fun</a>
-      <a href="thoughts.html" aria-current="page">Thoughts</a>
+      <a href="fun.html" aria-current="page">Fun</a>
+      <a href="thoughts.html">Thoughts</a>
       <a href="about.html">About</a>
       <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
         <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
@@ -35,12 +35,24 @@
 </header>
 
 <main>
-  <div class="wrap">
+  <div class="wrap-wide">
     <div class="page-head">
-      <h1>Thoughts</h1>
+      <h1>Fun</h1>
+      <p>Small things that run in the browser: concepts, toys, visualizations, games.</p>
     </div>
 
-    <p class="lede">Nothing here yet.</p>
+    <input type="search" id="fun-search" class="tool-search" placeholder="Search&hellip;" aria-label="Search fun" autocomplete="off">
+
+    <div class="tools-grid">
+      <div class="card">
+        <h3>Rock Paper Scissors Battle</h3>
+        <p>Pick how many rocks, papers, and scissors, then watch them bounce around and fight until one type is left standing.</p>
+        <div class="tags">rock paper scissors &middot; rps &middot; simulation &middot; battle &middot; canvas &middot; bouncing &middot; particles &middot; game &middot; last one standing</div>
+        <a href="rps.html">Open &rarr;</a>
+      </div>
+    </div>
+
+    <p class="tools-empty" hidden>Nothing matches that search.</p>
   </div>
 </main>
 

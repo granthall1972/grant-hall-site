@@ -1,7 +1,7 @@
 // Theme toggle. The initial theme is already set (before paint) by the
 // inline snippet in each page's <head>; this just wires up the button.
 
-var VERSION = "v0.19.0"; // bump on every push
+var VERSION = "v0.20.0"; // bump on every push
 
 function currentTheme() {
   var attr = document.documentElement.getAttribute('data-theme');
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function () {
   var credit = document.querySelector('.footer-inner > div');
   if (credit) credit.textContent = credit.textContent + ' · ' + VERSION;
 
-  var search = document.getElementById('tool-search');
+  var search = document.querySelector('.tool-search');
   if (search) {
     var cards = Array.prototype.slice.call(document.querySelectorAll('.tools-grid .card'));
     var empty = document.querySelector('.tools-empty');

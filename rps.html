@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rock Paper Scissors Battle — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css?v=13">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html">Tools</a>
+      <a href="fun.html" aria-current="page">Fun</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap-wide">
+    <a class="back-link" href="fun.html">&larr; Fun</a>
+    <div class="page-head">
+      <h1>Rock Paper Scissors Battle</h1>
+      <p>Set the roster, hit start, watch them fight. Rock crushes scissors, scissors cut paper, paper covers rock. Loser dies.</p>
+    </div>
+
+    <div id="setup" class="rps-setup">
+      <div class="tool-row"><span>Rocks &nbsp; <b id="c-rock">15</b></span><input type="range" id="s-rock" class="tool-range" min="0" max="60" value="15"></div>
+      <div class="tool-row"><span>Papers &nbsp; <b id="c-paper">15</b></span><input type="range" id="s-paper" class="tool-range" min="0" max="60" value="15"></div>
+      <div class="tool-row"><span>Scissors &nbsp; <b id="c-scissors">15</b></span><input type="range" id="s-scissors" class="tool-range" min="0" max="60" value="15"></div>
+      <div class="tool-row"><span>Speed &nbsp; <b id="c-speed">3</b></span><input type="range" id="s-speed" class="tool-range" min="1" max="8" value="3"></div>
+      <div class="tool-actions"><button type="button" id="start" class="tool-btn">Start</button></div>
+      <div id="setup-msg" class="tool-msg"></div>
+    </div>
+
+    <div class="fun-stage" id="stage" hidden>
+      <canvas id="cv"></canvas>
+      <div id="overlay" class="fun-overlay" hidden>
+        <div class="fun-result-emoji" id="win-emoji"></div>
+        <h2 id="win-title"></h2>
+        <p id="win-sub"></p>
+        <div class="tool-actions">
+          <button type="button" id="rematch" class="tool-btn">Rematch</button>
+          <button type="button" id="restart" class="tool-btn sub">Change counts</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js?v=13" defer></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var cv = $("cv"), ctx = cv.getContext("2d");
+
+  var EMOJI = { rock: "🪨", paper: "📄", scissors: "✂️" };
+  var BEATS = { rock: "scissors", scissors: "paper", paper: "rock" };
+  var LABEL = { rock: "Rock", paper: "Paper", scissors: "Scissors" };
+  var KINDS = ["rock", "paper", "scissors"];
+
+  var W = 0, H = 0, R = 16;
+  var objs = [], raf = 0, lastKill = 0, startCounts = null;
+  var bgColor = "#fff", fgColor = "#000";
+
+  KINDS.concat(["speed"]).forEach(function (n) {
+    $("s-" + n).addEventListener("input", function () { $("c-" + n).textContent = $("s-" + n).value; });
+  });
+
+  function sizeCanvas() {
+    var w = cv.clientWidth || 800;
+    W = Math.round(w);
+    H = Math.round(w * 0.6);
+    cv.width = W;
+    cv.height = H;
+    R = Math.max(11, Math.round(W / 46));
+  }
+
+  function makeObjs(counts, speed) {
+    var list = [];
+    var base = speed * (W / 520);
+    KINDS.forEach(function (type) {
+      for (var i = 0; i < counts[type]; i++) {
+        var ang = Math.random() * Math.PI * 2;
+        list.push({
+          type: type,
+          x: R + Math.random() * (W - 2 * R),
+          y: R + Math.random() * (H - 2 * R),
+          vx: Math.cos(ang) * base,
+          vy: Math.sin(ang) * base,
+          dead: false
+        });
+      }
+    });
+    return list;
+  }
+
+  function counts() {
+    var c = { rock: 0, paper: 0, scissors: 0 };
+    for (var i = 0; i < objs.length; i++) c[objs[i].type]++;
+    return c;
+  }
+  function alive() {
+    var c = counts();
+    return KINDS.filter(function (t) { return c[t] > 0; });
+  }
+
+  function step() {
+    var target = parseInt($("s-speed").value, 10) * (W / 520);
+    var i, j, a, b;
+
+    for (i = 0; i < objs.length; i++) {
+      a = objs[i];
+      a.x += a.vx;
+      a.y += a.vy;
+      if (a.x < R) { a.x = R; a.vx = Math.abs(a.vx); }
+      else if (a.x > W - R) { a.x = W - R; a.vx = -Math.abs(a.vx); }
+      if (a.y < R) { a.y = R; a.vy = Math.abs(a.vy); }
+      else if (a.y > H - R) { a.y = H - R; a.vy = -Math.abs(a.vy); }
+    }
+
+    for (i = 0; i < objs.length; i++) {
+      a = objs[i];
+      if (a.dead) continue;
+      for (j = i + 1; j < objs.length; j++) {
+        b = objs[j];
+        if (b.dead) continue;
+        var dx = b.x - a.x, dy = b.y - a.y;
+        var d2 = dx * dx + dy * dy;
+        var min = 2 * R;
+        if (d2 > min * min) continue;
+        var d = Math.sqrt(d2) || 0.0001;
+        var nx = dx / d, ny = dy / d;
+
+        if (a.type === b.type) {
+          var overlap = min - d;
+          a.x -= nx * overlap / 2; a.y -= ny * overlap / 2;
+          b.x += nx * overlap / 2; b.y += ny * overlap / 2;
+          var avn = a.vx * nx + a.vy * ny, bvn = b.vx * nx + b.vy * ny;
+          a.vx += (bvn - avn) * nx; a.vy += (bvn - avn) * ny;
+          b.vx += (avn - bvn) * nx; b.vy += (avn - bvn) * ny;
+        } else {
+          var winr = BEATS[a.type] === b.type ? a : b;
+          var losr = winr === a ? b : a;
+          losr.dead = true;
+          var s = winr === a ? -1 : 1;
+          winr.x += nx * R * s;
+          winr.y += ny * R * s;
+          lastKill = performance.now();
+        }
+      }
+    }
+
+    for (i = objs.length - 1; i >= 0; i--) if (objs[i].dead) objs.splice(i, 1);
+
+    for (i = 0; i < objs.length; i++) {
+      a = objs[i];
+      var sp = Math.sqrt(a.vx * a.vx + a.vy * a.vy);
+      if (sp < 0.01) {
+        var ang = Math.random() * Math.PI * 2;
+        a.vx = Math.cos(ang) * target;
+        a.vy = Math.sin(ang) * target;
+      } else {
+        a.vx = a.vx / sp * target;
+        a.vy = a.vy / sp * target;
+      }
+    }
+  }
+
+  function draw() {
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.font = (R * 1.8) + "px serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (var i = 0; i < objs.length; i++) {
+      ctx.fillText(EMOJI[objs[i].type], objs[i].x, objs[i].y);
+    }
+
+    var c = counts();
+    ctx.font = "14px 'JetBrains Mono', monospace";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = fgColor;
+    ctx.fillText(EMOJI.rock + " " + c.rock + "    " + EMOJI.paper + " " + c.paper + "    " + EMOJI.scissors + " " + c.scissors, 12, 12);
+  }
+
+  function loop() {
+    step();
+    draw();
+    var live = alive();
+    var stalled = performance.now() - lastKill > 20000;
+    if (live.length <= 1 || (stalled && objs.length)) {
+      finish(live, stalled);
+      return;
+    }
+    raf = requestAnimationFrame(loop);
+  }
+
+  function finish(live, stalled) {
+    cancelAnimationFrame(raf);
+    var c = counts();
+    var winner = null;
+    if (live.length === 1) {
+      winner = live[0];
+    } else if (stalled) {
+      var order = KINDS.slice().sort(function (x, y) { return c[y] - c[x]; });
+      winner = c[order[0]] > c[order[1]] ? order[0] : null;
+    }
+    $("win-emoji").textContent = winner ? EMOJI[winner] : "🤝";
+    $("win-title").textContent = winner ? LABEL[winner] + " wins!" : "It's a draw";
+    $("win-sub").textContent = "Started with " + startCounts.rock + " " + EMOJI.rock + "  " +
+      startCounts.paper + " " + EMOJI.paper + "  " + startCounts.scissors + " " + EMOJI.scissors +
+      (stalled && winner ? "  ·  called on numbers after a stalemate" : "");
+    $("overlay").hidden = false;
+  }
+
+  function begin(counts0) {
+    cancelAnimationFrame(raf);
+    $("overlay").hidden = true;
+    $("setup").hidden = true;
+    $("stage").hidden = false;
+    sizeCanvas();
+    var cs = getComputedStyle(document.body);
+    bgColor = cs.backgroundColor || "#fff";
+    fgColor = cs.color || "#000";
+    startCounts = counts0;
+    objs = makeObjs(counts0, parseInt($("s-speed").value, 10));
+    lastKill = performance.now();
+    draw();
+    if (alive().length <= 1) { finish(alive(), false); return; }
+    raf = requestAnimationFrame(loop);
+  }
+
+  $("start").addEventListener("click", function () {
+    var c = {
+      rock: parseInt($("s-rock").value, 10),
+      paper: parseInt($("s-paper").value, 10),
+      scissors: parseInt($("s-scissors").value, 10)
+    };
+    if (c.rock + c.paper + c.scissors < 2) {
+      $("setup-msg").textContent = "Add at least two objects.";
+      return;
+    }
+    $("setup-msg").textContent = "";
+    begin(c);
+  });
+  $("rematch").addEventListener("click", function () { begin(startCounts); });
+  $("restart").addEventListener("click", function () {
+    cancelAnimationFrame(raf);
+    $("overlay").hidden = true;
+    $("stage").hidden = true;
+    $("setup").hidden = false;
+  });
+})();
+</script>
+</body>
+</html>
