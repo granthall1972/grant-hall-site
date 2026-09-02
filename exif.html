@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EXIF — Grant Hall</title>
+<script>
+(function () {
+  try {
+    var stored = localStorage.getItem('theme');
+    var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  } catch (e) {}
+})();
+</script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="style.css?v=13">
+</head>
+<body>
+
+<header class="site">
+  <div class="header-inner">
+    <a class="logo" href="index.html">Grant Hall</a>
+    <nav class="links">
+      <a href="tools.html" aria-current="page">Tools</a>
+      <a href="thoughts.html">Thoughts</a>
+      <a href="about.html">About</a>
+      <button class="theme-toggle" data-theme-toggle aria-label="Toggle color theme">
+        <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="4" y1="12" x2="2" y2="12"></line><line x1="22" y1="12" x2="20" y2="12"></line><line x1="5" y1="5" x2="6.5" y2="6.5"></line><line x1="17.5" y1="17.5" x2="19" y2="19"></line><line x1="5" y1="19" x2="6.5" y2="17.5"></line><line x1="17.5" y1="6.5" x2="19" y2="5"></line></svg>
+        <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <a class="back-link" href="tools.html">&larr; Tools</a>
+    <div class="page-head">
+      <h1>EXIF</h1>
+      <p>Read, edit, or strip the metadata in a JPEG. Runs in the browser.</p>
+    </div>
+
+    <div class="tool">
+      <div class="tool-row">
+        <span>JPEG file</span>
+        <input type="file" id="file" class="tool-input-file" accept="image/jpeg,.jpg,.jpeg">
+      </div>
+      <div id="msg" class="tool-msg"></div>
+
+      <div id="loaded" hidden>
+        <img id="preview" class="exif-img" alt="preview">
+        <div id="fileinfo" class="tool-row"></div>
+
+        <div id="gps" class="exif-gps" hidden></div>
+
+        <div class="tool-row"><span>Edit fields (blank removes the tag)</span></div>
+        <div class="tool-row"><span>Description</span><input type="text" id="f-desc" class="tool-field" spellcheck="false" autocomplete="off"></div>
+        <div class="tool-row"><span>Artist</span><input type="text" id="f-artist" class="tool-field" spellcheck="false" autocomplete="off"></div>
+        <div class="tool-row"><span>Copyright</span><input type="text" id="f-copy" class="tool-field" spellcheck="false" autocomplete="off"></div>
+        <div class="tool-row"><span>Software</span><input type="text" id="f-soft" class="tool-field" spellcheck="false" autocomplete="off"></div>
+        <div class="tool-row"><span>Camera make</span><input type="text" id="f-make" class="tool-field" spellcheck="false" autocomplete="off"></div>
+        <div class="tool-row"><span>Camera model</span><input type="text" id="f-model" class="tool-field" spellcheck="false" autocomplete="off"></div>
+        <div class="tool-row"><span>Lens</span><input type="text" id="f-lens" class="tool-field" spellcheck="false" autocomplete="off"></div>
+        <div class="tool-row"><span>Date taken (YYYY:MM:DD HH:MM:SS)</span><input type="text" id="f-dto" class="tool-field" spellcheck="false" autocomplete="off"></div>
+        <div class="tool-row">
+          <span>Orientation</span>
+          <select id="f-orient" class="tool-select">
+            <option value="">keep</option>
+            <option value="1">1 – normal</option>
+            <option value="2">2 – flip horizontal</option>
+            <option value="3">3 – rotate 180°</option>
+            <option value="4">4 – flip vertical</option>
+            <option value="5">5 – transpose</option>
+            <option value="6">6 – rotate 90° CW</option>
+            <option value="7">7 – transverse</option>
+            <option value="8">8 – rotate 90° CCW</option>
+          </select>
+        </div>
+        <div class="tool-row"><span>GPS latitude (decimal)</span><input type="text" id="f-lat" class="tool-field" spellcheck="false" autocomplete="off" placeholder="e.g. 45.5231"></div>
+        <div class="tool-row"><span>GPS longitude (decimal)</span><input type="text" id="f-lng" class="tool-field" spellcheck="false" autocomplete="off" placeholder="e.g. -122.6765"></div>
+        <label class="tool-check"><input type="checkbox" id="f-nogps"> remove all GPS tags on export</label>
+
+        <div class="tool-actions">
+          <button type="button" id="dl-edit" class="tool-btn">Download with edits</button>
+          <button type="button" id="dl-strip" class="tool-btn sub">Download stripped</button>
+          <button type="button" id="copy" class="tool-btn sub">copy metadata</button>
+        </div>
+        <div id="msg2" class="tool-msg"></div>
+
+        <div id="thumb" class="exif-thumb" hidden></div>
+        <div class="tool-row"><span>All metadata</span></div>
+        <div class="jwt-claims" id="dump"></div>
+      </div>
+
+      <p class="tool-note">The file never leaves your browser. EXIF read/edit/strip here is JPEG only; it uses the <b>piexifjs</b> library, vendored on this site. "Stripped" removes the whole EXIF block. Editing rewrites it, keeping any tags you don't touch.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="site">
+  <div class="footer-inner">
+    <div>&copy; 2026 Grant Hall</div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Email</a>
+    </div>
+  </div>
+</footer>
+
+<script src="piexif.js" defer></script>
+<script src="script.js?v=13" defer></script>
+<script defer>
+window.addEventListener("DOMContentLoaded", function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  var IFDS = ["0th", "Exif", "GPS", "Interop", "1st"];
+  var state = { name: "image.jpg", dataUrl: null, exif: null };
+
+  // tag id -> [ifd, id]
+  var FIELDS = {
+    "f-desc":  ["0th", 270],
+    "f-make":  ["0th", 271],
+    "f-model": ["0th", 272],
+    "f-soft":  ["0th", 305],
+    "f-artist":["0th", 315],
+    "f-copy":  ["0th", 33432],
+    "f-lens":  ["Exif", 42036],
+    "f-dto":   ["Exif", 36867]
+  };
+
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function clean(s) { return String(s).replace(/\u0000+$/, ""); }
+
+  function fmt(v) {
+    if (typeof v === "string") return clean(v);
+    if (typeof v === "number") return String(v);
+    if (Array.isArray(v)) {
+      if (v.length && Array.isArray(v[0])) {
+        return v.map(function (p) { return p[1] ? p[0] + "/" + p[1] : String(p[0]); }).join(", ");
+      }
+      if (v.length === 2 && typeof v[0] === "number" && typeof v[1] === "number") {
+        var r = v[1] ? " (" + String(+(v[0] / v[1]).toFixed(6)) + ")" : "";
+        return v[0] + "/" + v[1] + r;
+      }
+      return v.join(", ");
+    }
+    return String(v);
+  }
+
+  function tagName(ifd, id) {
+    var t = window.piexif.TAGS[ifd] && window.piexif.TAGS[ifd][id];
+    return t && t.name ? t.name : "Tag " + id;
+  }
+
+  function decodeGps(gps) {
+    try {
+      if (!(2 in gps) || !(4 in gps)) return null;
+      var lat = window.piexif.GPSHelper.dmsRationalToDeg(gps[2], gps[1] || "N");
+      var lng = window.piexif.GPSHelper.dmsRationalToDeg(gps[4], gps[3] || "E");
+      if (isNaN(lat) || isNaN(lng)) return null;
+      return { lat: lat, lng: lng };
+    } catch (e) { return null; }
+  }
+
+  function renderDump() {
+    var html = "";
+    IFDS.forEach(function (ifd) {
+      var d = state.exif[ifd];
+      if (!d || !Object.keys(d).length) return;
+      html += "<div><b>[" + ifd + "]</b></div>";
+      Object.keys(d).forEach(function (id) {
+        html += "<div>&nbsp;&nbsp;" + esc(tagName(ifd, id)) + " &nbsp; " + esc(fmt(d[id])) + "</div>";
+      });
+    });
+    $("dump").innerHTML = html || "<div>No EXIF metadata found.</div>";
+  }
+
+  function renderGps() {
+    var g = decodeGps(state.exif.GPS || {});
+    if (!g) { $("gps").hidden = true; $("f-lat").value = ""; $("f-lng").value = ""; return; }
+    var la = +g.lat.toFixed(6), lo = +g.lng.toFixed(6);
+    $("f-lat").value = la;
+    $("f-lng").value = lo;
+    $("gps").hidden = false;
+    $("gps").innerHTML = "<b>GPS:</b> " + la + ", " + lo +
+      ' &nbsp; <a href="https://www.openstreetmap.org/?mlat=' + la + "&mlon=" + lo +
+      "#map=13/" + la + "/" + lo + '" target="_blank" rel="noopener">map</a>' +
+      " &nbsp; This photo carries your location. Use \u201cremove all GPS tags\u201d or strip.";
+  }
+
+  function renderThumb() {
+    var t = state.exif.thumbnail;
+    if (!t) { $("thumb").hidden = true; return; }
+    try {
+      var b64 = btoa(t);
+      $("thumb").hidden = false;
+      $("thumb").innerHTML = '<div class="tool-row"><span>Embedded thumbnail</span></div>' +
+        '<img class="exif-img" alt="thumbnail" src="data:image/jpeg;base64,' + b64 + '">';
+    } catch (e) { $("thumb").hidden = true; }
+  }
+
+  function prefill() {
+    Object.keys(FIELDS).forEach(function (fid) {
+      var ref = FIELDS[fid], v = state.exif[ref[0]] && state.exif[ref[0]][ref[1]];
+      $(fid).value = (v === undefined || v === null) ? "" : clean(v);
+    });
+    var o = state.exif["0th"] && state.exif["0th"][274];
+    $("f-orient").value = (o >= 1 && o <= 8) ? String(o) : "";
+    $("f-nogps").checked = false;
+  }
+
+  function textOut() {
+    var lines = [];
+    IFDS.forEach(function (ifd) {
+      var d = state.exif[ifd];
+      if (!d || !Object.keys(d).length) return;
+      lines.push("[" + ifd + "]");
+      Object.keys(d).forEach(function (id) {
+        lines.push("  " + tagName(ifd, id) + ": " + fmt(d[id]));
+      });
+    });
+    return lines.join("\n") || "No EXIF metadata.";
+  }
+
+  function load(file) {
+    $("msg").className = "tool-msg";
+    $("msg").textContent = "Reading\u2026";
+    $("msg2").textContent = "";
+    var isJpeg = /jpe?g$/i.test(file.name) || file.type === "image/jpeg";
+    var reader = new FileReader();
+    reader.onload = function () {
+      state.name = file.name || "image.jpg";
+      state.dataUrl = reader.result;
+      $("preview").src = state.dataUrl;
+      var img = new Image();
+      img.onload = function () {
+        $("fileinfo").innerHTML = "<span>File</span>" + esc(state.name) + " &middot; " +
+          img.naturalWidth + "\u00d7" + img.naturalHeight + " &middot; " + Math.round(file.size / 1024) + " KB";
+      };
+      img.src = state.dataUrl;
+
+      if (!isJpeg) {
+        $("msg").className = "tool-msg jwt-bad";
+        $("msg").textContent = "That is not a JPEG. Preview only; EXIF tools are JPEG only.";
+        state.exif = null;
+        $("loaded").hidden = true;
+        return;
+      }
+      try {
+        state.exif = window.piexif.load(state.dataUrl);
+      } catch (e) {
+        $("msg").className = "tool-msg jwt-bad";
+        $("msg").textContent = "Couldn't parse EXIF: " + (e && e.message ? e.message : e);
+        return;
+      }
+      $("msg").textContent = "";
+      $("loaded").hidden = false;
+      prefill();
+      renderGps();
+      renderThumb();
+      renderDump();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function applyEdits(exif) {
+    Object.keys(FIELDS).forEach(function (fid) {
+      var ref = FIELDS[fid], v = $(fid).value.trim();
+      if (!exif[ref[0]]) exif[ref[0]] = {};
+      if (v === "") delete exif[ref[0]][ref[1]];
+      else exif[ref[0]][ref[1]] = v;
+    });
+    var o = $("f-orient").value;
+    if (o) { if (!exif["0th"]) exif["0th"] = {}; exif["0th"][274] = parseInt(o, 10); }
+
+    if ($("f-nogps").checked) {
+      exif.GPS = {};
+    } else {
+      var lat = parseFloat($("f-lat").value), lng = parseFloat($("f-lng").value);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        var G = window.piexif.GPSHelper;
+        exif.GPS = exif.GPS || {};
+        exif.GPS[0] = [2, 3, 0, 0];
+        exif.GPS[1] = lat < 0 ? "S" : "N";
+        exif.GPS[2] = G.degToDmsRational(Math.abs(lat));
+        exif.GPS[3] = lng < 0 ? "W" : "E";
+        exif.GPS[4] = G.degToDmsRational(Math.abs(lng));
+      }
+    }
+    return exif;
+  }
+
+  function dataUrlToBlob(durl) {
+    var parts = durl.split(","), mime = (parts[0].match(/:(.*?);/) || [])[1] || "image/jpeg";
+    var bin = atob(parts[1]), n = bin.length, u8 = new Uint8Array(n);
+    while (n--) u8[n] = bin.charCodeAt(n);
+    return new Blob([u8], { type: mime });
+  }
+  function download(durl, suffix) {
+    var base = state.name.replace(/\.jpe?g$/i, "");
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(dataUrlToBlob(durl));
+    a.download = base + suffix + ".jpg";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  }
+
+  $("file").addEventListener("change", function () {
+    var f = $("file").files[0];
+    if (f) load(f);
+  });
+
+  $("dl-edit").addEventListener("click", function () {
+    if (!state.exif) return;
+    $("msg2").className = "tool-msg";
+    var dto = $("f-dto").value.trim();
+    if (dto && !/^\d{4}:\d\d:\d\d \d\d:\d\d:\d\d$/.test(dto)) {
+      $("msg2").className = "tool-msg jwt-bad";
+      $("msg2").textContent = "Date taken must look like 2026:09:01 14:30:00.";
+      return;
+    }
+    var working = window.piexif.load(state.dataUrl); // fresh copy of all tags
+    working.thumbnail = state.exif.thumbnail;
+    try {
+      var bytes = window.piexif.dump(applyEdits(working));
+      var out = window.piexif.insert(bytes, state.dataUrl);
+      download(out, "-edited");
+      state.dataUrl = out;
+      state.exif = window.piexif.load(out);
+      prefill(); renderGps(); renderThumb(); renderDump();
+      $("msg2").textContent = "Saved. The panel below now reflects the edited file; further edits build on it.";
+    } catch (e) {
+      $("msg2").className = "tool-msg jwt-bad";
+      $("msg2").textContent = "Write failed: " + (e && e.message ? e.message : e);
+    }
+  });
+
+  $("dl-strip").addEventListener("click", function () {
+    if (!state.dataUrl) return;
+    try {
+      download(window.piexif.remove(state.dataUrl), "-stripped");
+    } catch (e) {
+      $("msg2").className = "tool-msg jwt-bad";
+      $("msg2").textContent = "Strip failed: " + (e && e.message ? e.message : e);
+    }
+  });
+
+  $("copy").addEventListener("click", function () {
+    var btn = this, text = textOut();
+    var done = function (ok) {
+      btn.textContent = ok ? "copied" : "Ctrl+C";
+      setTimeout(function () { btn.textContent = "copy metadata"; }, 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+    } else { done(false); }
+  });
+});
+</script>
+</body>
+</html>
